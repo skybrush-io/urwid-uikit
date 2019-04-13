@@ -108,6 +108,8 @@ class MenuOverlay(DialogOverlay):
             item = extract_base_widget(item)
             if isinstance(item, SubmenuButton):
                 disconnect_signal(item, "click", self._open_submenu)
+            elif isinstance(item, MenuItemButton):
+                disconnect_signal(item, "click", self._close_all_menus)
         return True
 
     def open_menu(self, items, title=None):
@@ -123,6 +125,8 @@ class MenuOverlay(DialogOverlay):
             item = extract_base_widget(item)
             if isinstance(item, SubmenuButton):
                 connect_signal(item, "click", self._open_submenu)
+            elif isinstance(item, MenuItemButton):
+                connect_signal(item, "click", self._close_all_menus)
 
         widget = AttrMap(
             PatchedLineBox(menu, title=title),
@@ -133,6 +137,9 @@ class MenuOverlay(DialogOverlay):
         return self.open_dialog(
             widget, on_close=self._on_menu_closed, styled=True
         )
+
+    def _close_all_menus(self, item):
+        self.close()
 
     def _open_submenu(self, item):
         item.open_with(self)
