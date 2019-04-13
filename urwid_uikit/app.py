@@ -42,6 +42,9 @@ class Application(object):
         ('dim', 'black, bold', ''),
         ('error', 'light red, bold', '', 'standout'),
         ('success', 'light green, bold', '', ''),
+        ('title', 'bold', ''),
+        ('warning', 'yellow', '', ''),
+
         ('list focus', 'black', 'dark cyan', 'standout'),
 
         ('progress bar normal', '', 'black', ''),
@@ -55,8 +58,6 @@ class Application(object):
 
         ('download', 'light green, bold', ''),
         ('upload', 'light red, bold', ''),
-
-        ('title', 'bold', ''),
 
         ('dialog', 'white', 'dark blue'),
         ('dialog in background', 'black', 'dark gray'),
