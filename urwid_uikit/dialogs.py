@@ -39,7 +39,10 @@ class DialogOverlay(WidgetPlaceholder):
             Optional[Widget]: the widget that was closed or ``None`` if the
                 `on_close` callback of the widget prevented the operation
         """
-        widget, on_close = self._stack[0]
+        if not self._stack:
+            return None
+
+        widget, on_close = self._stack[-1]
         can_close = on_close() if on_close else True
 
         if can_close:
