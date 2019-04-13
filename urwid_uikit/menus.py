@@ -169,6 +169,45 @@ def create_submenu(title, items):
         return AttrMap(Text("  " + title), "menu disabled")
 
 
+def create_submenu_from_enum(title, items, getter, setter):
+    """Creates an array representing a submenu in a menu structure where each
+    item corresponds to a possible element of an enum, and at most one of
+    these elements is marked as the currently selected one.
+
+    Parameters:
+        title (str): the title of the submenu
+        items (Iterable[object, str]): an iterable that yields object-string
+            pairs such that the first element of the pair is a possible value
+            of the enum and the second element is the label of the
+            corresponding menu item.
+        getter (Union[object, callable]): an object that denotes the current
+            value of the enum, or a callable that returns such a value when
+            invoked with no arguments
+        setter (callable): a function that can be called with the new value of
+            the enum in order to activate the corresponding menu item
+
+    Returns:
+        object: an opaque object that describes a submenu containing one item
+            for each possible value of the enum such that the current one is
+            marked. This object can safely be passed to
+            `create_menu_item_from_spec()`.
+    """
+    current = getter() if callable(getter) else getter
+    if not title.endswith(">"):
+        title += ">"
+
+    return title, [
+        (
+            "({0}) {1}".format(
+                "*" if item is current else " ",
+                item_title
+            ),
+            setter, item
+        )
+        for item, item_title in items
+    ]
+
+
 def create_menu_item(title=None, callback=None, *args, **kwds):
     """Creates a widget in a menu with the given title.
 
