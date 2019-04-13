@@ -63,8 +63,6 @@ class LogViewerWidgetHandler(Handler):
         self._widget = widget
 
     def emit(self, record):
-        # TODO(ntamas): we don't know which thread this function is called
-        # from, so we need to ensure that it is called on the main thread
         try:
             msg = self.format(record)
             self._widget._add_entry(msg)
