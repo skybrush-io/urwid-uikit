@@ -103,6 +103,7 @@ class MenuOverlay(DialogOverlay):
 
     def _on_menu_closed(self, menu):
         """Callback to call when a menu widget was closed."""
+        menu = menu.base_widget
         for item in menu.items:
             item = extract_base_widget(item)
             if isinstance(item, SubmenuButton):
