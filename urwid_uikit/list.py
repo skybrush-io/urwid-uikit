@@ -61,7 +61,7 @@ class List(ListBox):
             if hasattr(widget, "refresh"):
                 widget.refresh()
 
-    def remove_widget(self, widget, index=None):
+    def remove_widget(self, widget):
         """Removes the given widget from the list box.
 
         Parameters:
@@ -73,9 +73,16 @@ class List(ListBox):
                 removal_index = index
                 break
 
-        # Do the deletion
         if removal_index is not None:
-            self.body.pop(removal_index)
+            self.remove_widget_at(removal_index)
+
+    def remove_widget_at(self, index):
+        """Removes the widget with the given index from the list box.
+
+        Parameters:
+            index (int): the index of the widget to remove
+        """
+        self.body.pop(index)
 
 
 class ObjectList(List):
