@@ -8,7 +8,8 @@ from argparse import Namespace
 from heapq import heapify
 from inspect import getargspec
 from urwid import (
-    AttrMap, Columns, ExitMainLoop, Frame, MainLoop, Padding, SolidFill, Text
+    AttrMap, Columns, ExitMainLoop, Frame, MainLoop, Padding, SolidFill, Text,
+    set_encoding
 )
 from threading import current_thread
 from time import time
@@ -71,7 +72,7 @@ class Application(object):
     _REFRESH_EVENT = object()
     _WAKE_UP_EVENT = object()
 
-    def __init__(self):
+    def __init__(self, encoding="utf8"):
         """Constructor."""
         self._auto_refresh = 0
         self._auto_refresh_timer = None
@@ -82,6 +83,9 @@ class Application(object):
         self.frame = self.create_ui()
         self._menu_overlay = MenuOverlay(self.frame)
         self.loop = self._create_loop()
+
+        if encoding:
+            set_encoding(encoding)
 
     @property
     def auto_refresh(self):
