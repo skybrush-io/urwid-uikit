@@ -140,9 +140,8 @@ class ObjectList(List):
         """
         first_item = self._extract_item_from_widget(first)
         second_item = self._extract_item_from_widget(second)
-        return (
-            self._compare_items(first_item, second_item) or
-            cmp(id(first), id(second))
+        return self._compare_items(first_item, second_item) or cmp(
+            id(first), id(second)
         )
 
     def _create_and_insert_widget_for_item(self, item):
@@ -159,8 +158,7 @@ class ObjectList(List):
             ValueError: if the item was already in the list
         """
         # Create the widget for the item and store it in the widget dict
-        self._widgets_by_items[item] = widget = \
-            self._create_widget_for_item(item)
+        self._widgets_by_items[item] = widget = self._create_widget_for_item(item)
         self._items_by_widgets[widget] = item
 
         # TODO: UAVList uses a call to _prepare_widget() here
@@ -354,9 +352,7 @@ class ObjectList(List):
         """
         focused_widget = self.focused_widget
 
-        widgets = sorted(
-            self.iterwidgets(), key=cmp_to_key(self._compare_widgets)
-        )
+        widgets = sorted(self.iterwidgets(), key=cmp_to_key(self._compare_widgets))
         self.body[:] = []
 
         for widget in widgets:

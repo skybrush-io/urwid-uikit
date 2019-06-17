@@ -9,8 +9,11 @@ from threading import Condition, Event, Thread
 
 
 __all__ = (
-    "AtomicCounter", "CancellableThread", "SelectableQueue", "ThreadPool",
-    "WorkerThread"
+    "AtomicCounter",
+    "CancellableThread",
+    "SelectableQueue",
+    "ThreadPool",
+    "WorkerThread",
 )
 
 log = logging.getLogger(__name__)
@@ -225,7 +228,7 @@ class WorkerThread(CancellableThread):
     def request_stop(self):
         """Requests the thread to stop as soon as possible."""
         super(WorkerThread, self).request_stop()
-        self._queue.put(None)      # to unblock the main loop
+        self._queue.put(None)  # to unblock the main loop
 
     def run(self):
         while not self.is_stop_requested:
@@ -462,7 +465,8 @@ class _PosixFDNotifier(object):
     @staticmethod
     def _set_nonblocking(fd):
         """Sets a file descriptor to non-blocking IO mode."""
-        import fcntl     # deferred import; not available on Win32
+        import fcntl  # deferred import; not available on Win32
+
         flags = fcntl.fcntl(fd, fcntl.F_GETFL)
         fcntl.fcntl(fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
 
@@ -482,7 +486,7 @@ class _PosixFDNotifier(object):
             os.close(pipe)
 
     def notify(self):
-        os.write(self._writable_pipe, b'x')
+        os.write(self._writable_pipe, b"x")
 
 
 FDNotifier = _PosixFDNotifier

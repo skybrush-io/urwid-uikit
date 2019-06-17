@@ -2,7 +2,7 @@
 
 from urwid import Text
 
-__all__ = ("SelectableText", )
+__all__ = ("SelectableText",)
 
 
 class SelectableText(Text):

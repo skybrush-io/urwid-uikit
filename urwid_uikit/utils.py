@@ -35,7 +35,7 @@ def tuplify(obj):
         tuple: if object is already a tuple, returns the object itself.
             Otherwise it returns the object wrapped in a tuple.
     """
-    return obj if isinstance(obj, tuple) else (obj, )
+    return obj if isinstance(obj, tuple) else (obj,)
 
 
 class StyledLabelFormatter(object):
@@ -98,17 +98,14 @@ class StyledLabelFormatter(object):
                 if self._format[start] == "{":
                     next_brace = self._format.find("}}", start)
                     if next_brace == -1:
-                        raise ValueError("Single '}' encountered in format "
-                                         "string")
-                    parts[-1] += self._format[start:(next_brace + 1)]
+                        raise ValueError("Single '}' encountered in format " "string")
+                    parts[-1] += self._format[start : (next_brace + 1)]
                     start = next_brace + 2
                 else:
                     next_brace = self._format.find("}", start)
                     if next_brace == -1:
-                        raise ValueError("Single '}' encountered in format "
-                                         "string")
-                    token, sep, modifier = \
-                        self._format[start:next_brace].partition(":")
+                        raise ValueError("Single '}' encountered in format " "string")
+                    token, sep, modifier = self._format[start:next_brace].partition(":")
                     if sep:
                         parts.append((token, ("{0:%s}" % modifier).format))
                     else:

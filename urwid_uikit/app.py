@@ -8,8 +8,15 @@ from argparse import Namespace
 from heapq import heapify
 from inspect import getargspec
 from urwid import (
-    AttrMap, Columns, ExitMainLoop, Frame, MainLoop, Padding, SolidFill, Text,
-    set_encoding
+    AttrMap,
+    Columns,
+    ExitMainLoop,
+    Frame,
+    MainLoop,
+    Padding,
+    SolidFill,
+    Text,
+    set_encoding,
 )
 from threading import current_thread
 from time import time
@@ -35,38 +42,31 @@ class Application(object):
     """
 
     palette = [
-        ('bg', 'light gray', 'black'),
-        ('header', 'white', 'dark blue', 'standout'),
-        ('footer', 'white', 'dark blue'),
-
-        ('debug', 'light gray', 'dark gray'),
-        ('dim', 'black, bold', ''),
-        ('error', 'light red, bold', '', 'standout'),
-        ('success', 'light green, bold', '', ''),
-        ('title', 'bold', ''),
-        ('warning', 'yellow', '', ''),
-
-        ('list focus', 'black', 'dark cyan', 'standout'),
-
-        ('progress bar normal', '', 'black', ''),
-        ('progress bar complete', 'black', 'dark cyan', ''),
-        ('progress bar successful', 'black', 'dark green', ''),
-        ('progress bar warning', 'black', 'brown', ''),
-        ('progress bar error', 'white', 'dark red', ''),
-
-        ('prompt', 'white, bold', '', 'standout'),
-        ('prompt_error', 'light red, bold', '', 'standout'),
-
-        ('download', 'light green, bold', ''),
-        ('upload', 'light red, bold', ''),
-
-        ('dialog', 'white', 'dark blue'),
-        ('dialog in background', 'black', 'dark gray'),
-
-        ('menu', 'white', 'dark blue'),
-        ('menu in background', 'black', 'dark gray'),
-        ('menu disabled', 'dark gray', 'dark blue'),
-        ('menu focus', 'black', 'light cyan')
+        ("bg", "light gray", "black"),
+        ("header", "white", "dark blue", "standout"),
+        ("footer", "white", "dark blue"),
+        ("debug", "light gray", "dark gray"),
+        ("dim", "black, bold", ""),
+        ("error", "light red, bold", "", "standout"),
+        ("success", "light green, bold", "", ""),
+        ("title", "bold", ""),
+        ("warning", "yellow", "", ""),
+        ("list focus", "black", "dark cyan", "standout"),
+        ("progress bar normal", "", "black", ""),
+        ("progress bar complete", "black", "dark cyan", ""),
+        ("progress bar successful", "black", "dark green", ""),
+        ("progress bar warning", "black", "brown", ""),
+        ("progress bar error", "white", "dark red", ""),
+        ("prompt", "white, bold", "", "standout"),
+        ("prompt_error", "light red, bold", "", "standout"),
+        ("download", "light green, bold", ""),
+        ("upload", "light red, bold", ""),
+        ("dialog", "white", "dark blue"),
+        ("dialog in background", "black", "dark gray"),
+        ("menu", "white", "dark blue"),
+        ("menu in background", "black", "dark gray"),
+        ("menu disabled", "dark gray", "dark blue"),
+        ("menu focus", "black", "light cyan"),
     ]
 
     _REFRESH_EVENT = object()
@@ -120,8 +120,7 @@ class Application(object):
                 self.refresh, after=value, every=value
             )
 
-    def call_later(self, callback, after=None, at=None, every=None,
-                   *args, **kwds):
+    def call_later(self, callback, after=None, at=None, every=None, *args, **kwds):
         """Schedules a callback function to be called by the main loop of
         the application after a given number of seconds.
 
@@ -146,8 +145,7 @@ class Application(object):
         assert self.loop is not None, "main loop must be running"
         if after is None and at is None:
             if every is None:
-                raise ValueError("exactly one of 'after' and 'at' must be "
-                                 "given")
+                raise ValueError("exactly one of 'after' and 'at' must be " "given")
             else:
                 after = 0
         if after is not None and at is not None:
@@ -183,8 +181,7 @@ class Application(object):
         """Configures the ``urwid`` main loop after it was created."""
         pass
 
-    def create_daemon(self, func, thread_factory=CancellableThread,
-                      *args, **kwds):
+    def create_daemon(self, func, thread_factory=CancellableThread, *args, **kwds):
         """Creates a daemon thread that will execute the given function
         and exits as soon as there are only other daemon threads left in
         the application (i.e. all non-daemon threads, including the main
@@ -202,13 +199,11 @@ class Application(object):
         Returns:
             Thread: a daemon thread that is ready to be started
         """
-        daemon = self.create_worker(func, thread_factory=thread_factory,
-                                    *args, **kwds)
+        daemon = self.create_worker(func, thread_factory=thread_factory, *args, **kwds)
         daemon.daemon = True
         return daemon
 
-    def create_worker(self, func, thread_factory=CancellableThread,
-                      *args, **kwds):
+    def create_worker(self, func, thread_factory=CancellableThread, *args, **kwds):
         """Creates a worker thread that will execute the given function.
         Any remaining positional and keyword arguments are passed on to the
         function when it is invoked by the worker thread.
@@ -251,7 +246,7 @@ class Application(object):
             call_later=self.call_later,
             inject_event=self.inject_event,
             is_stop_requested=None,
-            refresh=self.refresh
+            refresh=self.refresh,
         )
 
         if "ui" in arg_names:
@@ -332,8 +327,7 @@ class Application(object):
         """Creates and runs the main loop of the console GUI."""
         self._my_thread = current_thread()
 
-        self.loop.watch_file(self._events.fd,
-                             self._event_callback)
+        self.loop.watch_file(self._events.fd, self._event_callback)
 
         self.configure_main_loop()
         try:
@@ -351,8 +345,7 @@ class Application(object):
         override ``configure_main_loop()`` and ``cleanup_main_loop()``
         instead.
         """
-        return MainLoop(self._menu_overlay, self.palette,
-                        unhandled_input=self.on_input)
+        return MainLoop(self._menu_overlay, self.palette, unhandled_input=self.on_input)
 
     def _event_callback(self):
         """Handler called by the main loop when some events were injected
@@ -539,14 +532,8 @@ class ApplicationFrame(Frame):
 
         super(ApplicationFrame, self).__init__(
             body or SolidFill(),
-            AttrMap(
-                Padding(self.header_columns, left=1, right=1),
-                "header"
-            ),
-            AttrMap(
-                Padding(self.footer_columns, left=1, right=1),
-                "footer"
-            )
+            AttrMap(Padding(self.header_columns, left=1, right=1), "header"),
+            AttrMap(Padding(self.footer_columns, left=1, right=1), "footer"),
         )
 
     def _construct_header(self):
@@ -597,8 +584,10 @@ class ApplicationFrame(Frame):
         elif isinstance(options, tuple):
             pass
         else:
-            raise TypeError("expected None, int, float or tuple as "
-                            "options, got: {0!r}".format(type(options)))
+            raise TypeError(
+                "expected None, int, float or tuple as "
+                "options, got: {0!r}".format(type(options))
+            )
 
         if index is None:
             parent.contents.append((widget, options))

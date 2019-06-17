@@ -1,7 +1,7 @@
 from collections import deque
 from urwid import Edit, connect_signal
 
-__all__ = ("EditWithHistory", )
+__all__ = ("EditWithHistory",)
 
 
 class HistoryItem(object):

@@ -5,7 +5,7 @@ from __future__ import division
 from urwid import ProgressBar
 
 
-__all__ = ("CustomTextProgressBar", )
+__all__ = ("CustomTextProgressBar",)
 
 
 class CustomTextProgressBar(ProgressBar):
@@ -14,9 +14,7 @@ class CustomTextProgressBar(ProgressBar):
     def __init__(self, done=100):
         """Constructor."""
         super(CustomTextProgressBar, self).__init__(
-            normal="progress bar normal",
-            complete="progress bar complete",
-            done=done
+            normal="progress bar normal", complete="progress bar complete", done=done
         )
         self._template = u"{0} %"
         self._successful = False
@@ -87,10 +85,13 @@ class CustomTextProgressBar(ProgressBar):
         or ``has_error`` flags were altered.
         """
         self.complete = "progress bar {0}".format(
-            "error" if self._has_error else
-            "warning" if self._has_warning else
-            "successful" if self._successful else
-            "complete"
+            "error"
+            if self._has_error
+            else "warning"
+            if self._has_warning
+            else "successful"
+            if self._successful
+            else "complete"
         )
         self._invalidate()
 

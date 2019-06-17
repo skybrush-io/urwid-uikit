@@ -7,7 +7,7 @@ from urwid import AttrMap, Overlay, WidgetPlaceholder
 
 from .graphics import PatchedLineBox
 
-__all__ = ("DialogOverlay", )
+__all__ = ("DialogOverlay",)
 
 
 class DialogOverlay(WidgetPlaceholder):
@@ -76,7 +76,7 @@ class DialogOverlay(WidgetPlaceholder):
             widget = AttrMap(
                 PatchedLineBox(dialog, title=title),
                 "dialog in background",
-                focus_map="dialog"
+                focus_map="dialog",
             )
         else:
             widget = dialog
@@ -84,8 +84,10 @@ class DialogOverlay(WidgetPlaceholder):
         self.original_widget = Overlay(
             widget,
             self.original_widget,
-            align="center", width="pack",
-            valign="middle", height="pack"
+            align="center",
+            width="pack",
+            valign="middle",
+            height="pack",
         )
 
         self._stack.append((widget, partial(on_close, dialog)))

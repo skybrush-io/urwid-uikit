@@ -1,7 +1,7 @@
 from urwid import LineBox
 
 
-__all__ = ("PatchedLineBox", )
+__all__ = ("PatchedLineBox",)
 
 
 class PatchedLineBox(LineBox):

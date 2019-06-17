@@ -3,8 +3,15 @@
 from __future__ import absolute_import
 
 from urwid import (
-    AttrMap, Button, Divider, ListBox, SimpleFocusListWalker,
-    Text, WidgetWrap, connect_signal, disconnect_signal
+    AttrMap,
+    Button,
+    Divider,
+    ListBox,
+    SimpleFocusListWalker,
+    Text,
+    WidgetWrap,
+    connect_signal,
+    disconnect_signal,
 )
 
 from .dialogs import DialogOverlay
@@ -38,9 +45,7 @@ class Menu(WidgetWrap):
         if not size:
             # Fixed widget; we get to choose our own size
             if self.items:
-                max_width = max(
-                    self._get_item_width(item) for item in self.items
-                )
+                max_width = max(self._get_item_width(item) for item in self.items)
             else:
                 max_width = 0
             return max_width, self.rows(size, focus)
@@ -129,14 +134,10 @@ class MenuOverlay(DialogOverlay):
                 connect_signal(item, "click", self._close_all_menus)
 
         widget = AttrMap(
-            PatchedLineBox(menu, title=title),
-            "menu in background",
-            focus_map="menu"
+            PatchedLineBox(menu, title=title), "menu in background", focus_map="menu"
         )
 
-        return self.open_dialog(
-            widget, on_close=self._on_menu_closed, styled=True
-        )
+        return self.open_dialog(widget, on_close=self._on_menu_closed, styled=True)
 
     def _close_all_menus(self, item):
         self.close()
@@ -203,16 +204,17 @@ def create_submenu_from_enum(title, items, getter, setter):
     if not title.endswith(">"):
         title += ">"
 
-    return title, [
-        (
-            "({0}) {1}".format(
-                "*" if item is current else " ",
-                item_title
-            ),
-            setter, item
-        )
-        for item, item_title in items
-    ]
+    return (
+        title,
+        [
+            (
+                "({0}) {1}".format("*" if item is current else " ", item_title),
+                setter,
+                item,
+            )
+            for item, item_title in items
+        ],
+    )
 
 
 def create_menu_item(title=None, callback=None, *args, **kwds):
@@ -232,6 +234,7 @@ def create_menu_item(title=None, callback=None, *args, **kwds):
     enabled = callback is not None
 
     if enabled:
+
         def wrapper(button):
             return callback(*args, **kwds)
 
@@ -275,6 +278,4 @@ def create_menu_item_from_spec(spec=None):
         title = title[:-1].rstrip()
         return create_submenu(title, spec[1] if len(spec) > 1 else None)
 
-    return create_menu_item(
-        title, spec[1] if len(spec) > 1 else None, *spec[2:]
-    )
+    return create_menu_item(title, spec[1] if len(spec) > 1 else None, *spec[2:])

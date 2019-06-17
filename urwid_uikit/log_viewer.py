@@ -24,7 +24,7 @@ class ColoredFormatterWrapper(Formatter):
         "CRITICAL": ("error", u" \N{BLACK CIRCLE} "),
         "DEBUG": ("debug", u" \N{BLACK RIGHT-POINTING TRIANGLE} "),
         "WARNING": ("warning", u" \N{BLACK UP-POINTING TRIANGLE} "),
-        "ERROR": ("error", " \N{BLACK CIRCLE} ")
+        "ERROR": ("error", " \N{BLACK CIRCLE} "),
     }
 
     def __init__(self, formatter=None):
@@ -66,7 +66,7 @@ class LogViewerWidgetHandler(Handler):
         try:
             msg = self.format(record)
             self._widget._add_entry(msg)
-        except RecursionError:         # Python issue 36272
+        except RecursionError:  # Python issue 36272
             raise
         except Exception:
             self.handleError(record)
@@ -104,9 +104,7 @@ class LogViewerWidget(WidgetWrap):
 
     def add_marker(self):
         """Adds a new marker to the end of the list."""
-        self._app.call_on_ui_thread(
-            self._add_item_on_ui_thread, _create_marker()
-        )
+        self._app.call_on_ui_thread(self._add_item_on_ui_thread, _create_marker())
 
     def focus_most_recent_item(self):
         """Sets the focus of the log viewer widget to the most recent item.
@@ -142,9 +140,7 @@ class LogViewerWidget(WidgetWrap):
         Parameters:
             text (str): the formatted text of the log record
         """
-        self._app.call_on_ui_thread(
-            self._add_item_on_ui_thread, SelectableText(text)
-        )
+        self._app.call_on_ui_thread(self._add_item_on_ui_thread, SelectableText(text))
 
     def _add_item_on_ui_thread(self, widget):
         """Adds a new item to the end of the list.
@@ -157,9 +153,7 @@ class LogViewerWidget(WidgetWrap):
         """
         num_items = len(self._list.body)
 
-        at_bottom = (
-            num_items == 0 or self._list.focus_position == (num_items - 1)
-        )
+        at_bottom = num_items == 0 or self._list.focus_position == (num_items - 1)
 
         self._list.add_widget(widget)
 
