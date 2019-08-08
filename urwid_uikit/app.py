@@ -54,6 +54,7 @@ class Application(object):
         ("list focus", "black", "dark cyan", "standout"),
         ("progress bar normal", "", "black", ""),
         ("progress bar complete", "black", "dark cyan", ""),
+        ("progress bar smoothed part", "black", "dark cyan", ""),
         ("progress bar successful", "black", "dark green", ""),
         ("progress bar warning", "black", "brown", ""),
         ("progress bar error", "white", "dark red", ""),
