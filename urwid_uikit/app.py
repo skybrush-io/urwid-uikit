@@ -60,6 +60,7 @@ class Application(object):
         ("progress bar error", "white", "dark red", ""),
         ("prompt", "white, bold", "", "standout"),
         ("prompt_error", "light red, bold", "", "standout"),
+        ("standout", "white, bold", "", "standout"),
         ("download", "light green, bold", ""),
         ("upload", "light red, bold", ""),
         ("dialog", "white", "dark blue"),
@@ -269,6 +270,13 @@ class Application(object):
         """
         raise NotImplementedError
 
+    def get_event_loop(self):
+        """Returns the event loop instance to register in the main loop.
+        Default is a new SelectEventLoop instance. Override this method if
+        you need a different event loop, e.g., for integration with asyncio.
+        """
+        return None
+
     def inject_event(self, event):
         """Injects an arbitrary event object into the event queue of the
         application. This will make urwid run another iteration of its
@@ -343,10 +351,11 @@ class Application(object):
 
     def _create_loop(self):
         """Creates the main loop of the application. Not to be overridden;
-        override ``configure_main_loop()`` and ``cleanup_main_loop()``
-        instead.
+        override ``configure_main_loop()``, ``cleanup_main_loop()`` and
+        ``get_event_loop()`` instead.
         """
-        return MainLoop(self._menu_overlay, self.palette, unhandled_input=self.on_input)
+        event_loop = self.get_event_loop()
+        return MainLoop(self._menu_overlay, self.palette, event_loop=event_loop, unhandled_input=self.on_input)
 
     def _event_callback(self):
         """Handler called by the main loop when some events were injected
