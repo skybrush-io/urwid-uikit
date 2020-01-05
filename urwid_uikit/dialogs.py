@@ -1,7 +1,5 @@
 """Helper widgets for implementing dialog boxes"""
 
-from __future__ import absolute_import
-
 from functools import partial
 from urwid import AttrMap, Overlay, WidgetPlaceholder
 

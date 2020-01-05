@@ -1,7 +1,5 @@
 """Log viewer widget that shows the last N entries of a Python logger."""
 
-from __future__ import absolute_import
-
 from logging import getLogger, Formatter, Handler
 
 from urwid import Divider, WidgetWrap

@@ -6,7 +6,6 @@ verify_ssl = true
 [dev-packages]
 
 [packages]
-future = ">=0.17.1"
 urwid = ">=2.1.0"
 
 [requires]

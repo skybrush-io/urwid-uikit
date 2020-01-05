@@ -1,7 +1,5 @@
 """Helper widgets for implementing dropdown menus"""
 
-from __future__ import absolute_import
-
 from urwid import (
     AttrMap,
     Button,

@@ -1,7 +1,5 @@
 """Customized progress bar widgets."""
 
-from __future__ import division
-
 from urwid import ProgressBar, Text, CLIP
 from urwid.compat import ord2
 

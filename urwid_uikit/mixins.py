@@ -1,8 +1,12 @@
 __all__ = ("ObjectContainerMixin",)
 
 from functools import cmp_to_key
-from past.builtins import cmp
 from urwid import emit_signal
+
+
+def cmp(a, b):
+    """Replacement of `cmp()` from Python 2.x."""
+    return (a > b) - (a < b)
 
 
 class ObjectContainerMixin:

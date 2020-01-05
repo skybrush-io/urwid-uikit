@@ -1,7 +1,5 @@
 """Base application class and application frame widget."""
 
-from __future__ import absolute_import
-
 import logging
 
 from argparse import Namespace
@@ -355,7 +353,12 @@ class Application(object):
         ``get_event_loop()`` instead.
         """
         event_loop = self.get_event_loop()
-        return MainLoop(self._menu_overlay, self.palette, event_loop=event_loop, unhandled_input=self.on_input)
+        return MainLoop(
+            self._menu_overlay,
+            self.palette,
+            event_loop=event_loop,
+            unhandled_input=self.on_input,
+        )
 
     def _event_callback(self):
         """Handler called by the main loop when some events were injected
