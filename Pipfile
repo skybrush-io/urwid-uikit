@@ -7,7 +7,7 @@ verify_ssl = true
 
 [packages]
 future = ">=0.17.1"
-urwid = ">=2.0.1"
+urwid = ">=2.1.0"
 
 [requires]
 python_version = "3.7"
