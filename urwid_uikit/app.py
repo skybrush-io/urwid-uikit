@@ -76,6 +76,7 @@ class Application(object):
         """Constructor."""
         self._auto_refresh = 0
         self._auto_refresh_timer = None
+        self._event_loop = None
         self._events = SelectableQueue()
         self._menu_overlay = None
         self._my_thread = None
@@ -181,6 +182,19 @@ class Application(object):
         """Configures the ``urwid`` main loop after it was created."""
         pass
 
+    def create_event_loop(self):
+        """Creates a new ``urwid`` event loop instance that the application
+        will use.
+
+        Do not call this method on your own; ``get_event_loop()`` will call it
+        if needed.
+
+        Override this method in subclasses if you need to integrate your app
+        with another event loop instead of urwid's default select-based event
+        loop.
+        """
+        pass
+
     def create_daemon(self, func, thread_factory=CancellableThread, *args, **kwds):
         """Creates a daemon thread that will execute the given function
         and exits as soon as there are only other daemon threads left in
@@ -270,10 +284,15 @@ class Application(object):
 
     def get_event_loop(self):
         """Returns the event loop instance to register in the main loop.
-        Default is a new SelectEventLoop instance. Override this method if
-        you need a different event loop, e.g., for integration with asyncio.
+        Default is a new SelectEventLoop instance. Guarantees that it
+        returns the same event loop after it was created.
+
+        Typically you don't need to override this method; override
+        ``create_event_loop()`` instead.
         """
-        return None
+        if self._event_loop is None:
+            self._event_loop = self.create_event_loop()
+        return self._event_loop
 
     def inject_event(self, event):
         """Injects an arbitrary event object into the event queue of the
@@ -350,13 +369,12 @@ class Application(object):
     def _create_loop(self):
         """Creates the main loop of the application. Not to be overridden;
         override ``configure_main_loop()``, ``cleanup_main_loop()`` and
-        ``get_event_loop()`` instead.
+        ``create_event_loop()`` instead.
         """
-        event_loop = self.get_event_loop()
         return MainLoop(
             self._menu_overlay,
             self.palette,
-            event_loop=event_loop,
+            event_loop=self.get_event_loop(),
             unhandled_input=self.on_input,
         )
 
