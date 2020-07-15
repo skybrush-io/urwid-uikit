@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "urwid-uikit"
+version = "1.8.0"
+description = "Commonly used UI widgets for urwid-based apps"
+authors = ["Tamas Nepusz <tamas@collmot.com>"]
+packages = [
+    { include = "urwid_uikit", from = "src" }
+]
+
+[tool.poetry.dependencies]
+python = "^3.7"
+urwid = "^2.1.0"
+
+[tool.poetry.dev-dependencies]
+
+[tool.poetry.extras]
+
+[[tool.poetry.source]]
+name = "collmot"
+url = "https://pypi.collmot.com/simple/"
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
