@@ -88,7 +88,7 @@ class DialogOverlay(WidgetPlaceholder):
             height="pack",
         )
 
-        self._stack.append((widget, partial(on_close, dialog)))
+        self._stack.append((widget, partial(on_close, dialog) if on_close else None))
 
     def keypress(self, size, key):
         """Handler called when a key is pressed in the overlay."""
