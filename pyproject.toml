@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "urwid-uikit"
-version = "1.8.1"
+version = "1.8.2"
 description = "Commonly used UI widgets for urwid-based apps"
 authors = ["Tamas Nepusz <tamas@collmot.com>"]
 packages = [
