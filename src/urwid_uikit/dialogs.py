@@ -44,7 +44,7 @@ class DialogOverlay(WidgetPlaceholder):
         can_close = on_close() if on_close else True
 
         if can_close:
-            self.original_widget = self.original_widget[0]
+            self.original_widget = self.original_widget.bottom_w
             self._stack.pop()
             return widget
         else:
