@@ -1,16 +1,22 @@
 [[package]]
-category = "main"
-description = "A full-featured console (xterm et al.) user interface library"
 name = "urwid"
+version = "2.1.2"
+description = "A full-featured console (xterm et al.) user interface library"
+category = "main"
 optional = false
 python-versions = "*"
-version = "2.1.0"
+
+[package.source]
+type = "legacy"
+url = "https://pypi.collmot.com/simple"
+reference = "collmot"
 
 [metadata]
-content-hash = "18bf40499bd8383d80986e2039f47edb67cffa2dc8cae979166bffd5d37692de"
+lock-version = "1.1"
 python-versions = "^3.7"
+content-hash = "18bf40499bd8383d80986e2039f47edb67cffa2dc8cae979166bffd5d37692de"
 
 [metadata.files]
 urwid = [
-    {file = "urwid-2.1.0.tar.gz", hash = "sha256:0896f36060beb6bf3801cb554303fef336a79661401797551ba106d23ab4cd86"},
+    {file = "urwid-2.1.2.tar.gz", hash = "sha256:588bee9c1cb208d0906a9f73c613d2bd32c3ed3702012f51efe318a3f2127eae"},
 ]
