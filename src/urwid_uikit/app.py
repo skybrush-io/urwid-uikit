@@ -1,7 +1,10 @@
 """Base application class and application frame widget."""
 
+from __future__ import annotations
+
 import logging
 
+from abc import abstractmethod, ABCMeta
 from argparse import Namespace
 from heapq import heapify
 from inspect import getargspec
@@ -14,10 +17,22 @@ from urwid import (
     Padding,
     SolidFill,
     Text,
+    Widget,
     set_encoding,
 )
-from threading import current_thread
+from threading import Thread, current_thread
 from time import time
+from typing import (
+    Any,
+    Callable,
+    Generic,
+    NoReturn,
+    Optional,
+    Sequence,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
 from .concurrency import CancellableThread, SelectableQueue
 from .menus import MenuOverlay
@@ -27,7 +42,12 @@ log = logging.getLogger(__name__)
 __all__ = ("Application", "ApplicationFrame")
 
 
-class Application(object):
+TWidget = TypeVar("TWidget", bound="Widget")
+
+Event = Any
+
+
+class Application(Generic[TWidget], metaclass=ABCMeta):
     """Base class for urwid-based applications.
 
     Attributes:
@@ -72,7 +92,16 @@ class Application(object):
     _REFRESH_EVENT = object()
     _WAKE_UP_EVENT = object()
 
-    def __init__(self, encoding="utf8"):
+    _auto_refresh: float
+    _auto_refresh_timer: Optional["CallbackHandle"]
+    _events: SelectableQueue[Event]
+    _menu_overlay: Optional[MenuOverlay]
+    _my_thread: Optional[Thread]
+
+    frame: TWidget
+    loop: MainLoop
+
+    def __init__(self, encoding: str = "utf8"):
         """Constructor."""
         self._auto_refresh = 0
         self._auto_refresh_timer = None
@@ -80,7 +109,7 @@ class Application(object):
         self._events = SelectableQueue()
         self._menu_overlay = None
         self._my_thread = None
-        self.loop = None
+        self.loop = None  # type: ignore
         self.frame = self.create_ui()
         self._menu_overlay = MenuOverlay(self.frame)
         self.loop = self._create_loop()
@@ -89,7 +118,7 @@ class Application(object):
             set_encoding(encoding)
 
     @property
-    def auto_refresh(self):
+    def auto_refresh(self) -> float:
         """Returns the value of the auto-refresh interval. When this
         property is set to a positive value X, the screen will be re-drawn
         automatically after every X seconds. When this property is set to
@@ -121,43 +150,56 @@ class Application(object):
                 self.refresh, after=value, every=value
             )
 
-    def call_later(self, callback, after=None, at=None, every=None, *args, **kwds):
+    def call_later(
+        self,
+        callback: Callable[..., Any],
+        after: Optional[float] = None,
+        at: Optional[float] = None,
+        every: Optional[float] = None,
+        *args,
+        **kwds
+    ) -> "CallbackHandle":
         """Schedules a callback function to be called by the main loop of
         the application after a given number of seconds.
 
         Parameters:
             callback (callable): the callback to call
-            after (Optional[float]): number of seconds after which the callback
-                should be called. Negative or zero means that the callback
-                is called immediately. When this parameter is given, ``to``
-                must be ``None``.
-            at (Optional[float]): the exact time (measured in the number of
-                seconds elapsed since the UNIX epoch) when the callback
-                should be called. When this parameter is given, ``after``
-                must be ``None``.
-            every (Optional[float]): when given, the callback will be
-                recurrent and will be called every X seconds after the
-                first call until the callback handle is cancelled.
+            after: number of seconds after which the callback should be called.
+                Negative or zero means that the callback is called immediately.
+                When this parameter is given, ``at`` must be ``None``.
+            at: the exact time (measured in the number of seconds elapsed since
+                the UNIX epoch) when the callback should be called. When this
+                parameter is given, ``after`` must be ``None``.
+            every: when given, the callback will be recurrent and will be called
+                every X seconds after the first call until the callback handle
+                is cancelled.
 
         Returns:
-            CallbackHandle: a handle to the scheduled callback function that
-                can be used to reschedule it if needed
+            a handle to the scheduled callback function that can be used to
+            reschedule it if needed
         """
         assert self.loop is not None, "main loop must be running"
+
         if after is None and at is None:
             if every is None:
                 raise ValueError("exactly one of 'after' and 'at' must be " "given")
             else:
                 after = 0
+
         if after is not None and at is not None:
             raise ValueError("exactly one of 'after' and 'at' must be given")
+
         if after is None:
+            assert at is not None
             after = at - time()
+
         handle = CallbackHandle(self, callback, every, args, kwds)
         handle.reschedule(after=after)
         return handle
 
-    def call_on_ui_thread(self, func, *args, **kwds):
+    def call_on_ui_thread(
+        self, func: Callable[..., Any], *args, **kwds
+    ) -> CallbackHandle:
         """Schedules the given function to be called by the main loop of
         the application as soon as possible, i.e. in the next iteration of
         the main loop.
@@ -174,15 +216,15 @@ class Application(object):
         handle.reschedule_now()
         return handle
 
-    def cleanup_main_loop(self):
+    def cleanup_main_loop(self) -> None:
         """Cleans the ``urwid`` main loop after it has exited."""
         pass
 
-    def configure_main_loop(self):
+    def configure_main_loop(self) -> None:
         """Configures the ``urwid`` main loop after it was created."""
         pass
 
-    def create_event_loop(self):
+    def create_event_loop(self) -> Any:
         """Creates a new ``urwid`` event loop instance that the application
         will use.
 
@@ -195,7 +237,13 @@ class Application(object):
         """
         pass
 
-    def create_daemon(self, func, thread_factory=CancellableThread, *args, **kwds):
+    def create_daemon(
+        self,
+        func: Callable[..., Any],
+        thread_factory: Callable[..., CancellableThread] = CancellableThread,
+        *args,
+        **kwds
+    ) -> CancellableThread:
         """Creates a daemon thread that will execute the given function
         and exits as soon as there are only other daemon threads left in
         the application (i.e. all non-daemon threads, including the main
@@ -205,19 +253,26 @@ class Application(object):
         about the arguments.
 
         Parameters:
-            func (callable): the function to execute in the daemon thread.
-            thread_factory (callable): the function that is used to create
-                a new thread. It will be called in a manner similar to the
-                constructor of the Thread_ class.
+            func: the function to execute in the daemon thread
+            thread_factory: the function that is used to create a new thread.
+                It will be called in a manner similar to the constructor of the
+                Thread_ class and must return an instance of CancellableThread_
+                or one of its subclasses.
 
         Returns:
-            Thread: a daemon thread that is ready to be started
+            a daemon thread that is ready to be started
         """
         daemon = self.create_worker(func, thread_factory=thread_factory, *args, **kwds)
         daemon.daemon = True
         return daemon
 
-    def create_worker(self, func, thread_factory=CancellableThread, *args, **kwds):
+    def create_worker(
+        self,
+        func: Callable[..., Any],
+        thread_factory: Callable[..., CancellableThread] = CancellableThread,
+        *args,
+        **kwds
+    ) -> CancellableThread:
         """Creates a worker thread that will execute the given function.
         Any remaining positional and keyword arguments are passed on to the
         function when it is invoked by the worker thread.
@@ -246,13 +301,14 @@ class Application(object):
           by the Application_ class.
 
         Parameters:
-            func (callable): the function to execute in the worker thread.
-            thread_factory (callable): the function that is used to create
-                a new thread. It will be called in a manner similar to the
-                constructor of the Thread_ class.
+            func: the function to execute in the worker thread
+            thread_factory: the function that is used to create a new thread.
+                It will be called in a manner similar to the constructor of the
+                Thread_ class and must return an instance of CancellableThread_
+                or one of its subclasses.
 
         Returns:
-            Thread: a worker thread that is ready to be started
+            a worker thread that is ready to be started
         """
         arg_names, _, _, _ = getargspec(func)
         context = Namespace(
@@ -273,7 +329,8 @@ class Application(object):
 
         return thread
 
-    def create_ui(self):
+    @abstractmethod
+    def create_ui(self) -> TWidget:
         """Creates the main widget of the application that will be run by
         the ``urwid`` main loop.
 
@@ -282,7 +339,7 @@ class Application(object):
         """
         raise NotImplementedError
 
-    def get_event_loop(self):
+    def get_event_loop(self) -> Any:
         """Returns the event loop instance to register in the main loop.
         Default is a new SelectEventLoop instance. Guarantees that it
         returns the same event loop after it was created.
@@ -294,7 +351,7 @@ class Application(object):
             self._event_loop = self.create_event_loop()
         return self._event_loop
 
-    def inject_event(self, event):
+    def inject_event(self, event: Event) -> None:
         """Injects an arbitrary event object into the event queue of the
         application. This will make urwid run another iteration of its
         event loop and also force a screen refresh.
@@ -306,14 +363,16 @@ class Application(object):
         """
         self._events.put(event)
 
-    def invoke_menu(self):
+    def invoke_menu(self) -> bool:
         """Invokes the main menu of the application.
 
         Returns:
-            bool: whether the main menu was shown. If the application has
-                no attribute named `on_menu_invoked()`, returns ``False`` as
-                there is no main menu associated to the application.
+            whether the main menu was shown. If the application has no attribute
+            named `on_menu_invoked()`, returns ``False`` as there is no main
+            menu associated to the application.
         """
+        assert self._menu_overlay is not None, "menu overlay is not ready yet"
+
         func = getattr(self, "on_menu_invoked", None)
         if func is not None:
             items = func()
@@ -323,7 +382,7 @@ class Application(object):
         else:
             return False
 
-    def on_input(self, input):
+    def on_input(self, input: str) -> None:
         """Callback method that is called by ``urwid`` for unhandled
         keyboard input.
 
@@ -337,19 +396,19 @@ class Application(object):
         elif input == "esc":
             self.invoke_menu() or self.quit()
 
-    def process_event(self, event):
+    def process_event(self, event: Event) -> None:
         """Processes the given event that was dispatched via
         ``inject_event()`` into the main loop of the application.
         """
         pass
 
-    def refresh(self):
+    def refresh(self) -> None:
         """Forces the application to refresh its main widget. Useful when
         the state of a widget changed in another thread.
         """
         self.inject_event(self._REFRESH_EVENT)
 
-    def run(self):
+    def run(self) -> None:
         """Creates and runs the main loop of the console GUI."""
         self._my_thread = current_thread()
 
@@ -362,11 +421,11 @@ class Application(object):
             self.loop.remove_watch_file(self._events.fd)
             self.cleanup_main_loop()
 
-    def quit(self):
+    def quit(self) -> NoReturn:
         """Quits the application."""
         raise ExitMainLoop()
 
-    def _create_loop(self):
+    def _create_loop(self) -> MainLoop:
         """Creates the main loop of the application. Not to be overridden;
         override ``configure_main_loop()``, ``cleanup_main_loop()`` and
         ``create_event_loop()`` instead.
@@ -378,7 +437,7 @@ class Application(object):
             unhandled_input=self.on_input,
         )
 
-    def _event_callback(self):
+    def _event_callback(self) -> None:
         """Handler called by the main loop when some events were injected
         into the main loop via ``inject_event()``, before the next screen
         refresh.
@@ -392,7 +451,7 @@ class Application(object):
             else:
                 self.process_event(event)
 
-    def _wake_up(self):
+    def _wake_up(self) -> None:
         """Forces the application to wake up if the main loop is currently
         in the idle state. Useful when another thread scheduled a new alarm
         or added a new file descriptor to watch.
@@ -403,7 +462,7 @@ class Application(object):
             self.inject_event(self._WAKE_UP_EVENT)
 
 
-class CallbackHandle(object):
+class CallbackHandle:
     """Handle to the invocation of a callback function scheduled with
     ``Application.call_later()``.
 
@@ -418,7 +477,20 @@ class CallbackHandle(object):
         num_called (int): the number of times the callback was called
     """
 
-    def __init__(self, app, callback, interval, args, kwds):
+    _app: Application
+    _num_called: int
+
+    callback: Callable[..., Any]
+    interval: Optional[float]
+
+    def __init__(
+        self,
+        app: Application,
+        callback: Callable[..., Any],
+        interval: Optional[float],
+        args,
+        kwds,
+    ):
         """Constructor."""
         self._app = app
         self._num_called = 0
@@ -426,14 +498,12 @@ class CallbackHandle(object):
         self._handle = None
         self._next_call_at = None
 
-        self.debug = False
-
         self.callback = callback
         self.interval = interval
         self.args = args
         self.kwds = kwds
 
-    def _call(self, loop, user_data):
+    def _call(self, loop: MainLoop, user_data: Any):
         """Calls the callback stored in the handle right now."""
         # Fix a bug in urwid.SelectEventLoop
         if hasattr(loop, "event_loop"):
@@ -450,11 +520,11 @@ class CallbackHandle(object):
                 self.reschedule(after=self.interval)
 
     @property
-    def called(self):
+    def called(self) -> bool:
         """Returns whether the callback was called at least once."""
         return self._num_called > 0
 
-    def cancel(self):
+    def cancel(self) -> None:
         """Cancels any scheduled call to the callback.
 
         If the callback was called already and it is not recurrent, this
@@ -466,7 +536,7 @@ class CallbackHandle(object):
             self._app.loop.remove_alarm(handle)
             self._app._wake_up()
 
-    def delay_next_call(self, by):
+    def delay_next_call(self, by: float) -> bool:
         """Delays the next scheduled call of the callback with the given
         number of seconds.
 
@@ -475,10 +545,10 @@ class CallbackHandle(object):
         has no scheduled next call.
 
         Parameters:
-            by (float): the number of seconds to delay the next call by
+            by: the number of seconds to delay the next call by
 
         Returns:
-            bool: True if a new call was scheduled, False otherwise
+            True if a new call was scheduled, False otherwise
         """
         if self._next_call_at is None:
             return False
@@ -488,25 +558,27 @@ class CallbackHandle(object):
             return self.reschedule(to=self._next_call_at + by)
 
     @property
-    def num_called(self):
+    def num_called(self) -> int:
         """Returns how many times the callback was called so far."""
         return self._num_called
 
-    def reschedule(self, after=None, to=None):
+    def reschedule(
+        self, after: Optional[float] = None, to: Optional[float] = None
+    ) -> bool:
         """Reschedules the callback to the current time plus the given
         number of seconds, or to a given timestamp.
 
         Parameters:
-            after (Optional[float]): the number of seconds that must pass
-                before the callback is called, starting from now. If this
-                parameter is given, ``to`` must be ``None``.
-            to (Optional[float]): the exact time (measured in seconds since
-                the UNIX epoch) when the callback must be called. If this
-                parameter is given, ``after`` must be ``None``.
+            after: the number of seconds that must pass before the callback is
+                called, starting from now. If this parameter is given, ``to``
+                must be ``None``.
+            to: the exact time (measured in seconds since the UNIX epoch) when
+                the callback must be called. If this parameter is given,
+                ``after`` must be ``None``.
 
         Returns:
-            bool: True if the rescheduling was successful, False if the
-                callback was called already
+            True if the rescheduling was successful, False if the callback was
+            called already
         """
         if after is None and to is None:
             raise ValueError("exactly one of 'after' or 'to' must be given")
@@ -518,33 +590,40 @@ class CallbackHandle(object):
         now = time()
         if to is not None:
             after = to - now
+
+        assert after is not None
+
         after = max(after, 0)
         self._next_call_at = now + after
 
         # Even if after == 0, we cannot call the callback directly because
         # we want to ensure that it is called by the urwid main thread.
         # So we schedule the callback no matter what.
-        if self.debug:
-            log.info("%r: Setting alarm in %.4f" % (self, after))
-
         self._handle = self._app.loop.set_alarm_in(after, self._call)
         self._app._wake_up()
 
         return True
 
-    def reschedule_now(self):
+    def reschedule_now(self) -> bool:
         """Schedules the callback to be called as soon as possible in the
         next iteration of the urwid main loop.
         """
         return self.reschedule(after=0)
 
     @property
-    def seconds_left(self):
+    def seconds_left(self) -> float:
         """Returns the number of seconds left till the next call."""
         if self._next_call_at is not None:
             return max(self._next_call_at - time(), 0.0)
         else:
             return 0.0
+
+
+#: Type alias for objects returned from Columns.options() in urwid
+ColumnOptions = Optional[Union[int, float, Tuple[Any, ...]]]
+
+#: Type alias for urwid text or markup
+TextOrMarkup = Union[str, Tuple[str, str], Sequence[Union[str, Tuple[str, str]]]]
 
 
 class ApplicationFrame(Frame):
@@ -556,56 +635,76 @@ class ApplicationFrame(Frame):
         footer_label (urwid.Text): the default label in the footer component
     """
 
-    def __init__(self, body=None):
+    def __init__(self, body: Optional[Widget] = None):
         """Constructor."""
         self.header_columns = self._construct_header()
         self.footer_columns = self._construct_footer()
 
-        super(ApplicationFrame, self).__init__(
+        super().__init__(
             body or SolidFill(),
             AttrMap(Padding(self.header_columns, left=1, right=1), "header"),
             AttrMap(Padding(self.footer_columns, left=1, right=1), "footer"),
         )
 
-    def _construct_header(self):
+    def _construct_header(self) -> Widget:
         """Constructs and returns the urwid component to place in the
         header of the application.
         """
         self.header_label = Text(("header", ""), wrap="clip")
         return Columns([self.header_label], dividechars=1)
 
-    def _construct_footer(self):
+    def _construct_footer(self) -> Widget:
         """Constructs and returns the urwid component to place in the
         footer of the application.
         """
         self.footer_label = Text(("footer", ""), wrap="clip")
         return Columns([self.footer_label], dividechars=1)
 
-    def add_header_widget(self, widget, options=None, index=None):
+    def add_header_widget(
+        self,
+        widget: Widget,
+        options: ColumnOptions = None,
+        index: Optional[int] = None,
+    ):
         """Adds a new widget to the header.
 
         Parameters:
-            widget (urwid.Widget): the widget to add
-            options (tuple): an options tuple for the widget, as returned
-                by the ``options()`` method of ``urwid.Columns()``
-            index (Optional[int]): the index where the new widget will be
-                added in the header. ``None`` means the end of the header.
+            widget: the widget to add
+            options: an options tuple for the widget, as returned by the
+                ``options()`` method of ``urwid.Columns()``. May also be
+                ``None`` (for tight packing), a fixed width as an integer,
+                or a fraction as a float.
+            index: the index where the new widget will be added in the header.
+                ``None`` means the end of the header.
         """
         self._add_widget_to(self.header_columns, widget, options, index)
 
-    def add_footer_widget(self, widget, options=None, index=None):
+    def add_footer_widget(
+        self,
+        widget: Widget,
+        options: ColumnOptions = None,
+        index: Optional[int] = None,
+    ):
         """Adds a new widget to the footer.
 
         Parameters:
-            widget (urwid.Widget): the widget to add
-            options (tuple): an options tuple for the widget, as returned
-                by the ``options()`` method of ``urwid.Columns()``
-            index (Optional[int]): the index where the new widget will be
-                added in the header. ``None`` means the end of the header.
+            widget: the widget to add
+            options: an options tuple for the widget, as returned by the
+                ``options()`` method of ``urwid.Columns()``. May also be
+                ``None`` (for tight packing), a fixed width as an integer,
+                or a fraction as a float.
+            index: the index where the new widget will be added in the footer.
+                ``None`` means the end of the footer.
         """
         self._add_widget_to(self.footer_columns, widget, options, index)
 
-    def _add_widget_to(self, parent, widget, options, index):
+    def _add_widget_to(
+        self,
+        parent: Widget,
+        widget: Widget,
+        options: ColumnOptions,
+        index: Optional[int],
+    ):
         if options is None:
             options = parent.options("pack")
         elif isinstance(options, int):
@@ -626,21 +725,21 @@ class ApplicationFrame(Frame):
             parent.contents.insert(index, (widget, options))
 
     @property
-    def status(self):
+    def status(self) -> TextOrMarkup:
         """Status message shown in the footer."""
-        return self.footer_label.get_text()
+        return self.footer_label.get_text()  # type: ignore
 
     @status.setter
-    def status(self, value):
+    def status(self, value: TextOrMarkup) -> None:
         """Sets the status message shown in the footer."""
         self.footer_label.set_text(value)
 
     @property
-    def title(self):
+    def title(self) -> TextOrMarkup:
         """Title text shown in the header."""
-        return self.header_label.get_text()
+        return self.header_label.get_text()  # type: ignore
 
     @title.setter
-    def title(self, value):
+    def title(self, value) -> None:
         """Sets the title text shown in the header."""
         self.header_label.set_text(value)

@@ -1,12 +1,14 @@
 """Concurrency- and threading-related classes and functions."""
 
+from __future__ import annotations
+
 import errno
 import logging
 import os
 import queue
 
 from threading import Condition, Event, Thread
-
+from typing import Callable, Generic, List, Optional, Tuple, TypeVar, Union
 
 __all__ = (
     "AtomicCounter",
@@ -19,13 +21,19 @@ __all__ = (
 log = logging.getLogger(__name__)
 
 
-class AtomicCounter(object):
+T = TypeVar("T")
+
+
+class AtomicCounter:
     """Integer counter object that can be increased and decreased atomically
     and that provides an atomic "wait until nonzero and then clear" method
     as well.
     """
 
-    def __init__(self, value=0):
+    _value: int
+    _condition: Condition
+
+    def __init__(self, value: int = 0):
         """Constructor.
 
         Parameters:
@@ -34,42 +42,45 @@ class AtomicCounter(object):
         self._value = value
         self._condition = Condition()
 
-    def decrease(self, delta=1):
+    def decrease(self, delta: int = 1) -> None:
         """Increases the value of the counter atomically with the given value.
 
         Parameters:
-            delta (int): the number to increase the counter with
+            delta: the number to increase the counter with
         """
         return self.increase(-delta)
 
-    def increase(self, delta=1):
+    def increase(self, delta: int = 1) -> None:
         """Increases the value of the counter atomically with the given value.
 
         Parameters:
-            delta (int): the number to increase the counter with
+            delta: the number to increase the counter with
         """
         with self._condition:
             self._value += delta
             self._condition.notify_all()
 
     @property
-    def value(self):
+    def value(self) -> int:
         """The current value of the counter."""
         return self._value
 
     @value.setter
-    def value(self, new_value):
+    def value(self, new_value: int) -> None:
         with self._condition:
             self._value = new_value
             self._condition.notify_all()
 
-    def wait(self, timeout=None):
+    def wait(self, timeout: Optional[float] = None) -> int:
         """Waits until the counter becomes nonzero, then returns the value of
         the counter.
 
         Parameters:
-            timeout (Optional[float]): when not `None`, specifies the maximum
-                number of seconds to wait for the counter to become nonzero
+            timeout: when not `None`, specifies the maximum number of seconds to
+                wait for the counter to become nonzero
+
+        Returns:
+            the value of the counter
         """
         with self._condition:
             if timeout is None:
@@ -80,13 +91,16 @@ class AtomicCounter(object):
                     self._condition.wait(timeout)
             return self._value
 
-    def wait_and_reset(self, timeout=None):
+    def wait_and_reset(self, timeout: Optional[float] = None) -> int:
         """Waits until the counter becomes nonzero, then returns the value of
         the counter and resets the counter to zero.
 
         Parameters:
-            timeout (Optional[float]): when not `None`, specifies the maximum
-                number of seconds to wait for the counter to become nonzero
+            timeout: when not `None`, specifies the maximum number of seconds to
+                wait for the counter to become nonzero
+
+        Returns:
+            the value of the counter before it was reset to zero
         """
         with self._condition:
             if timeout is None:
@@ -115,21 +129,29 @@ class CancellableThread(Thread):
         self._stop_event = Event()
 
     @property
-    def is_stop_requested(self):
+    def is_stop_requested(self) -> bool:
         """Returns whether the thread was requested to stop."""
         return self._stop_event.is_set()
 
-    def request_stop(self):
+    def request_stop(self) -> None:
         """Requests the thread to stop as soon as possible."""
         self._stop_event.set()
 
 
-class SelectableQueue(object):
+class SelectableQueue(Generic[T]):
     """Python queue class that wraps another queue and provides a file
     descriptor that becomes readable when the queue becomes non-empty.
     """
 
-    def __init__(self, queue_or_factory=queue.Queue):
+    _notifier: "FDNotifier"
+    _queue: queue.Queue[T]
+
+    def __init__(
+        self,
+        queue_or_factory: Union[
+            Callable[[], queue.Queue[T]], queue.Queue[T]
+        ] = queue.Queue,
+    ):
         """Constructor.
 
         Parameters:
@@ -143,21 +165,26 @@ class SelectableQueue(object):
         self._notifier = FDNotifier()
 
     def __del__(self):
+        self.close()
+
+    def close(self) -> None:
+        """Closes the queue. No items should be added to the queue after it was
+        closed.
+        """
         self._notifier.close()
 
     @property
-    def fd(self):
+    def fd(self) -> int:
         """The file descriptor that becomes readable when items are put
         into the queue.
         """
         return self._notifier.fd
 
-    def get_all(self, block=True, timeout=None):
+    def get_all(self) -> List[T]:
         """Returns all pending items from the queue without blocking.
 
         Returns:
-            List[object]: the list of items retrieved from the queue; may be
-                empty if ``block`` is ``False``
+            the list of items retrieved from the queue; may be empty
         """
         # We are draining the notifier first. This is important -- if someone
         # else calls put() while we are running get_all(), it may happen
@@ -171,7 +198,7 @@ class SelectableQueue(object):
 
         self._notifier.drain()
 
-        result = []
+        result: List[T] = []
         try:
             while True:
                 result.append(self._queue.get_nowait())
@@ -180,7 +207,7 @@ class SelectableQueue(object):
 
         return result
 
-    def put(self, item, block=True, timeout=None):
+    def put(self, item: T, block: bool = True, timeout: Optional[float] = None) -> None:
         """Puts an item in the queue.
 
         Parameters:
@@ -197,11 +224,11 @@ class SelectableQueue(object):
         self._queue.put(item, block, timeout)
         self._notifier.notify()
 
-    def put_nowait(self, item):
+    def put_nowait(self, item: T) -> None:
         """Puts an item in the queue if it is not full.
 
         Parameters:
-            item (object): the item to put in the queue
+            item: the item to put in the queue
 
         Raises:
             Queue.Full: if the queue is full
@@ -247,10 +274,17 @@ class WorkerThread(CancellableThread):
             job._notify(result, error)
 
 
-class ThreadPoolJob(object):
+class ThreadPoolJob(Generic[T]):
     """Object representing a job that was submitted to the thread pool."""
 
-    def __init__(self, func, args, kwds):
+    _func: Callable[..., T]
+    _result_and_error: Optional[Tuple[Optional[T], Optional[Exception]]]
+
+    _on_error: Optional[Callable[[Exception], None]]
+    _on_result: Optional[Callable[[T], None]]
+    _on_terminated: Optional[Callable[[Optional[Exception]], None]]
+
+    def __init__(self, func: Callable[..., T], args, kwds):
         """Constructor.
 
         Parameters:
@@ -268,11 +302,11 @@ class ThreadPoolJob(object):
         self._on_error = None
         self._on_terminated = None
 
-    def _execute(self):
+    def _execute(self) -> T:
         """Executes the job in the current thread."""
         return self._func(*self._args, **self._kwds)
 
-    def _notify(self, result, error):
+    def _notify(self, result: Optional[T], error: Optional[Exception]) -> None:
         """Notifies the job about its execution result so it can call the
         appropriate handlers.
         """
@@ -285,7 +319,7 @@ class ThreadPoolJob(object):
         self._call_error_handler_if_needed()
         self._call_termination_handler_if_needed()
 
-    def _call_error_handler_if_needed(self):
+    def _call_error_handler_if_needed(self) -> None:
         if self._result_and_error is None or self._on_error is None:
             return
 
@@ -293,7 +327,7 @@ class ThreadPoolJob(object):
         if error is not None:
             self._on_error(error)
 
-    def _call_result_handler_if_needed(self):
+    def _call_result_handler_if_needed(self) -> None:
         if self._result_and_error is None or self._on_result is None:
             return
 
@@ -301,28 +335,28 @@ class ThreadPoolJob(object):
         if error is None:
             self._on_result(result)
 
-    def _call_termination_handler_if_needed(self):
+    def _call_termination_handler_if_needed(self) -> None:
         if self._result_and_error is None or self._on_terminated is None:
             return
 
         _, error = self._result_and_error
-        if error is None:
-            self._on_terminated()
-        else:
-            self._on_terminated(error)
+        self._on_terminated(error)
 
-    def then(self, func, on_error=None):
+    def then(
+        self,
+        func: Callable[[T], None],
+        on_error: Optional[Callable[[Exception], None]] = None,
+    ) -> None:
         """Registers a handler function to call when the job has finished
         successfully.
 
         Parameters:
-            func (callable): the callable to call when the job has
-                finished successfully. It will be called with the return value
-                of the job function as its only argument.
-            on_error (Optional[callable]): the callable to call when the
-                job has terminated with an error (i.e. when an exception was)
-                thrown. It will be called with the exception as its only
-                argument.
+            func: the callable to call when the job has finished successfully.
+                It will be called with the return value of the job function as
+                its only argument.
+            on_error: the callable to call when the job has terminated with an
+                error (i.e. when an exception was thrown). It will be called
+                with the exception as its only argument.
         """
         if self._on_result is not None:
             raise ValueError("multiple result handlers are not supported")
@@ -335,14 +369,14 @@ class ThreadPoolJob(object):
         if on_error is not None:
             self.catch_(on_error)
 
-    def catch_(self, func):
+    def catch_(self, func: Callable[[Exception], None]) -> None:
         """Registers a handler function to call when the job has finished
         with an error.
 
         Parameters:
-            func (callable): the callable to call when the job has terminated
-                with an error (i.e. when an exception was) thrown. It will be
-                called with the exception as its only argument.
+            func: the callable to call when the job has terminated with an
+                error (i.e. when an exception was thrown). It will be called
+                with the exception as its only argument.
         """
         if self._on_error is not None:
             raise ValueError("multiple error handlers are not supported")
@@ -352,15 +386,15 @@ class ThreadPoolJob(object):
 
         self._call_error_handler_if_needed()
 
-    def finally_(self, func):
+    def finally_(self, func: Callable[[Optional[Exception]], None]) -> None:
         """Registers a handler function to call when the job has finished,
         irrespectively of whether it has finished with an error it has
         finished successfully.
 
         Parameters:
-            func (callable): the callable to call. It will be called with no
-                arguments if the execution was successful, otherwise it will be
-                called with the error as its only argument.
+            func (callable): the callable to call. It will be called with a
+                single argument, which is `None` if the execution was successsful
+                or the error that happened if the execution was not successful.
         """
         if self._on_terminated is not None:
             raise ValueError("multiple termination handlers are not supported")
@@ -371,28 +405,31 @@ class ThreadPoolJob(object):
         self._call_termination_handler_if_needed()
 
 
-class ThreadPool(object):
+class ThreadPool:
     """Simple thread pool object that manages multiple worker threads and
     distributes tasks between them.
     """
 
-    def __init__(self, num_threads=5):
+    _queue: queue.Queue[ThreadPoolJob]
+    _threads: List[WorkerThread]
+
+    def __init__(self, num_threads: int = 5):
         """Constructor.
 
         Parameters:
-            num_threads (int): the number of threads in the pool
+            num_threads: the number of threads in the pool
         """
         self._queue = queue.Queue(num_threads)
         self._threads = [WorkerThread(self._queue) for _ in range(num_threads)]
         for thread in self._threads:
             thread.start()
 
-    def stop(self):
+    def stop(self) -> None:
         while self._threads:
             thread = self._threads.pop()
             thread.request_stop()
 
-    def submit(self, *args, **kwds):
+    def submit(self, *args, **kwds) -> ThreadPoolJob:
         """Submits a new job to the thread pool.
 
         The first positional argument is the function to call when the job is
@@ -407,14 +444,14 @@ class ThreadPool(object):
 
         return job
 
-    def wait_for_completion(self):
+    def wait_for_completion(self) -> None:
         self._queue.join()
 
     def __del__(self):
         self.stop()
 
 
-class _PosixFDNotifier(object):
+class _PosixFDNotifier:
     """Notifier object that provides a file descriptor that becomes ready
     for reading whenever the user calls the ``notify()`` method of the
     notifier.
@@ -437,20 +474,26 @@ class _PosixFDNotifier(object):
         fd (int): the file descriptor to block on in a ``select()`` call
     """
 
+    _readable_pipe: Optional[int]
+    _writable_pipe: Optional[int]
+
     def __init__(self):
-        self._readable_pipe, self._writable_pipe = None, None
         self._readable_pipe, self._writable_pipe = self._prepare_pipes()
 
     def __del__(self):
         self.close()
 
-    def drain(self):
+    def drain(self) -> None:
         """Drains the readable end of the pipe by reading everything that is
         currently available.
         """
+        pipe = self._readable_pipe
+        if not pipe:
+            return
+
         while True:
             try:
-                os.read(self._readable_pipe, 1)
+                os.read(pipe, 1)
             except OSError as ex:
                 if ex.errno == errno.EAGAIN:
                     # The pipe is drained
@@ -459,25 +502,19 @@ class _PosixFDNotifier(object):
                     raise
 
     @property
-    def fd(self):
+    def fd(self) -> int:
+        assert self._readable_pipe is not None, "queue is already closed"
         return self._readable_pipe
-
-    @staticmethod
-    def _set_nonblocking(fd):
-        """Sets a file descriptor to non-blocking IO mode."""
-        import fcntl  # deferred import; not available on Win32
-
-        flags = fcntl.fcntl(fd, fcntl.F_GETFL)
-        fcntl.fcntl(fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
 
     def _prepare_pipes(self):
         """Prepares the input and output pipes."""
         rd, wr = os.pipe()
-        self._set_nonblocking(rd)
-        self._set_nonblocking(wr)
+        os.set_blocking(rd, False)
+        os.set_blocking(wr, False)
         return rd, wr
 
-    def close(self):
+    def close(self) -> None:
+        """Closes the notifier. No-op if the notifier is already closed."""
         if self._readable_pipe is not None:
             pipe, self._readable_pipe = self._readable_pipe, None
             os.close(pipe)
@@ -485,7 +522,8 @@ class _PosixFDNotifier(object):
             pipe, self._writable_pipe = self._writable_pipe, None
             os.close(pipe)
 
-    def notify(self):
+    def notify(self) -> None:
+        assert self._writable_pipe is not None, "queue is already closed"
         os.write(self._writable_pipe, b"x")
 
 
