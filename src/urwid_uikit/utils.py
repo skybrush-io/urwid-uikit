@@ -1,9 +1,12 @@
 """Utility functions and classes for the implementation of urwid widgets."""
 
+from typing import Any
+from urwid import Widget
+
 __all__ = ("extract_base_widget", "StyledLabelFormatter")
 
 
-def extract_base_widget(widget):
+def extract_base_widget(widget: Widget) -> Widget:
     """If the widget is a decorator widget, attempts to extract the base
     widget that the decorator decorates by retrieving its ``base_widget``
     attribute.
@@ -13,7 +16,7 @@ def extract_base_widget(widget):
     widget that is not decorated.
 
     Parameters:
-        widget (Widget): a decorator widget
+        widget: a decorator widget
 
     Returns:
         Widget: the widget that the decorator widget decorates
@@ -24,7 +27,7 @@ def extract_base_widget(widget):
         return widget
 
 
-def tuplify(obj):
+def tuplify(obj: Any) -> tuple:
     """Ensures that the given object is a tuple. If it is not a tuple, wraps
     it in a tuple.
 

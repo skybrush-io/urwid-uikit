@@ -1,7 +1,8 @@
 __all__ = ("ObjectContainerMixin",)
 
 from functools import cmp_to_key
-from urwid import emit_signal
+from urwid import emit_signal, Widget
+from typing import Callable, Dict, Generic, Optional, TypeVar
 
 
 def cmp(a, b):
@@ -9,11 +10,18 @@ def cmp(a, b):
     return (a > b) - (a < b)
 
 
-class ObjectContainerMixin:
+T = TypeVar("T")
+
+
+class ObjectContainerMixin(Generic[T]):
     """Mixin class for urwid widgets that contain other widgets related to
-    some business objects such that there is a 1:1 mapping between business
+    some business objectss such that there is a 1:1 mapping between business
     objects and widgets.
     """
+
+    _items_by_widgets: Dict[Widget, T]
+    _widgets_by_items: Dict[T, Widget]
+    _key_function: Callable[[T], int]
 
     def __init__(self):
         """Constructor."""
@@ -22,25 +30,25 @@ class ObjectContainerMixin:
         self._items_by_widgets = {}
         self._widgets_by_items = {}
 
-    def _clear_body(self):
+    def _clear_body(self) -> None:
         if hasattr(self, "body"):
             # For ListBox; maybe "contents" also works there? Need to check.
-            self.body[:] = []
+            self.body[:] = []  # type: ignore
         else:
-            self.contents[:] = []
+            self.contents[:] = []  # type: ignore
 
-    def _compare_items(self, first, second):
+    def _compare_items(self, first, second) -> int:
         """Compares two items in order to determine the order in which they
         should appear in the list.
 
         Parameters:
-            first (object): the first item
-            second (object): the second item
+            first: the first item
+            second: the second item
 
         Returns:
-            int: 0 if the two items are the same or have the same key, negative
-                number if the first item should appear first, positive number
-                if the second item should appear first
+            0 if the two items are the same or have the same key, negative
+            number if the first item should appear first, positive number
+            if the second item should appear first
         """
         key_of_first = self._key_function(first)
         key_of_second = self._key_function(second)
@@ -51,7 +59,7 @@ class ObjectContainerMixin:
         else:
             return -1
 
-    def _compare_widgets(self, first, second):
+    def _compare_widgets(self, first: Widget, second: Widget) -> int:
         """Compares two widgets in the list in order to determine the order
         in which they should appear in the list.
 
@@ -70,15 +78,15 @@ class ObjectContainerMixin:
             id(first), id(second)
         )
 
-    def _create_and_insert_widget_for_item(self, item):
+    def _create_and_insert_widget_for_item(self, item: T) -> Widget:
         """Creates a widget that will represent the given item and inserts it
         into the appropriate place in the list.
 
         Parameters:
-            item (object): the item for which we want to create a widget
+            item: the item for which we want to create a widget
 
         Returns:
-            urwid.Widget: the widget that was created for the UAV
+            the widget that was created for the itme
 
         Throws:
             ValueError: if the item was already in the list
@@ -91,40 +99,40 @@ class ObjectContainerMixin:
         # Insert the widget into the list so that the list appears sorted by
         # key
         insertion_index = self._get_insertion_index_for_item(item)
-        self.add_widget(widget, insertion_index)
+        self.add_widget(widget, insertion_index)  # type: ignore
 
         # Return the widget
         return widget
 
-    def _create_widget_for_item(self, item):
+    def _create_widget_for_item(self, item: T) -> Widget:
         """Creates a widget that will represent the given item.
 
         Must be overridden in subclasses.
 
         Parameters:
-            item (object): the item for which we want to create a widget
+            item: the item for which we want to create a widget
 
         Returns:
-            urwid.Widget: the widget that corresponds to the given UAV
+            the widget that corresponds to the given item
         """
         raise NotImplementedError
 
-    def _default_key_function(self, item):
+    def _default_key_function(self, item: T) -> int:
         """Returns the key to be used shown for an item if the user did not
         override the value in the ``key_function`` property.
         """
         if hasattr(item, "id"):
-            return item.id
+            return item.id  # type: ignore
         else:
             return id(item)
 
-    def _emit_item_selected_signal(self):
-        focus = self.focused_widget
+    def _emit_item_selected_signal(self) -> None:
+        focus = self.focused_widget  # type: ignore
         item = self._extract_item_from_widget(focus) if focus else None
         if item:
             emit_signal(self, "selected", item)
 
-    def _extract_item_from_widget(self, widget):
+    def _extract_item_from_widget(self, widget: Widget) -> T:
         """Extracts the item that a given widget in the list represents,
         given the widget. Can be overridden in subclasses if there is an
         easy way to retrieve the item from the widget.
@@ -137,22 +145,22 @@ class ObjectContainerMixin:
         """
         return self._items_by_widgets[widget]
 
-    def _get_insertion_index_for_item(self, item):
+    def _get_insertion_index_for_item(self, item: T) -> Optional[int]:
         """Given a new item that is not in the list yet, determines the
         insertion point where the item should be inserted in order to keep
         the list sorted.
 
         Parameters:
-            item (object): the item to insert
+            item: the item to insert
 
         Returns:
-            Optional[int]: the index where the item should be inserted or
-                ``None`` if the item should be inserted at the end
+            the index where the item should be inserted or ``None`` if the item
+            should be inserted at the end
 
         Throws:
             ValueError: if the item is already in the list
         """
-        for index, existing_widget in enumerate(self.iterwidgets()):
+        for index, existing_widget in enumerate(self.iterwidgets()):  # type: ignore
             existing_item = self._extract_item_from_widget(existing_widget)
             if existing_item is item:
                 raise ValueError("item is already in the list")
@@ -160,10 +168,10 @@ class ObjectContainerMixin:
                 return index
         return None
 
-    def _prepare_widget(self, widget):
+    def _prepare_widget(self, widget: Widget) -> None:
         pass
 
-    def add_item(self, item):
+    def add_item(self, item: T) -> Widget:
         """Adds the given item (or, more precisely, a widget that represents
         the item) into the list.
 
@@ -172,12 +180,12 @@ class ObjectContainerMixin:
         item is already in the list.
 
         Parameters:
-            item (object): the item that is about to be added.
+            item: the item that is about to be added.
 
         Returns:
-            urwid.Widget: the widget that corresponds to the given UAV.
+            Widget: the widget that corresponds to the given item
         """
-        return self.get_widget_for_item(item, create_if_missing=True)
+        return self.get_widget_for_item(item, create_if_missing=True)  # type: ignore
 
     def clear(self):
         """Removes all the widgets from the list."""
@@ -196,7 +204,9 @@ class ObjectContainerMixin:
         """
         return self.get_widget_for_item(item) is not None
 
-    def get_widget_for_item(self, item, create_if_missing=False):
+    def get_widget_for_item(
+        self, item: T, create_if_missing: bool = False
+    ) -> Optional[Widget]:
         """Retrieves the widget corresponding to the given item, optionally
         creating it if it does not exist yet.
 
@@ -234,7 +244,7 @@ class ObjectContainerMixin:
 
         self._key_function = value
 
-        for widget in self.iterwidgets():
+        for widget in self.iterwidgets():  # type: ignore
             self._prepare_widget(widget)
 
         self.update_order()
@@ -265,35 +275,35 @@ class ObjectContainerMixin:
                 item or ``None`` if there was no widget for the item in the
                 list
         """
-        widget = self._get_widget_for_uav(item, create_if_missing=False)
-        self.remove_widget(widget)
+        widget = self.get_widget_for_item(item, create_if_missing=False)
+        self.remove_widget(widget)  # type: ignore
         del self._widgets_by_items[item]
         return widget
 
     @property
-    def selected_item(self):
+    def selected_item(self) -> Optional[T]:
         """Returns the item represented by the focused widget, or
         ``None`` if there is no selected widget.
         """
-        widget = self.focused_widget
+        widget = self.focused_widget  # type: ignore
         if widget is None:
             return None
 
         return self._extract_item_from_widget(widget.base_widget)
 
-    def update_order(self):
-        """Notifies the widget that the list may have to be re-sorted based
-        on the shown IDs of the UAVs.
+    def update_order(self) -> None:
+        """Notifies the widget that the list may have to be re-sorted if the
+        sorting function has changed.
         """
-        focused_widget = self.focused_widget
+        focused_widget: Optional[Widget] = self.focused_widget  # type: ignore
 
-        widgets = sorted(self.iterwidgets(), key=cmp_to_key(self._compare_widgets))
+        widgets = sorted(self.iterwidgets(), key=cmp_to_key(self._compare_widgets))  # type: ignore
         self._clear_body()
 
         for widget in widgets:
-            self.add_widget(widget)
+            self.add_widget(widget)  # type: ignore
 
         if focused_widget in widgets:
             self.focus_position = widgets.index(focused_widget)
 
-        self.refresh()
+        self.refresh()  # type: ignore

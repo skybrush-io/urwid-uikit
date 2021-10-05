@@ -1,6 +1,7 @@
 """Widgets containing lists of various things."""
 
-from urwid import AttrMap, ListBox, SimpleFocusListWalker
+from typing import Iterator, Optional
+from urwid import AttrMap, ListBox, SimpleFocusListWalker, Widget
 
 from .mixins import ObjectContainerMixin
 
@@ -14,15 +15,14 @@ class List(ListBox):
 
     def __init__(self):
         """Constructor."""
-        super(List, self).__init__(SimpleFocusListWalker([]))
+        super().__init__(SimpleFocusListWalker([]))
 
-    def add_widget(self, widget, index=None):
+    def add_widget(self, widget: Widget, index: Optional[int] = None) -> None:
         """Adds a new widget to the list box.
 
         Parameters:
-            widget (urwid.Widget): the widget to add
-            index (Optional[int]): the insertion index; ``None`` means the
-                end of the list
+            widget: the widget to add
+            index: the insertion index; ``None`` means the end of the list
         """
         # Wrap the widget in an AttrMap before it actually gets inserted
         wrapped_widget = AttrMap(widget, "", "list focus")
@@ -35,7 +35,7 @@ class List(ListBox):
         self._invalidate()
 
     @property
-    def focused_widget(self):
+    def focused_widget(self) -> Optional[Widget]:
         """Returns the focused widget of the list.
 
         Returns:
@@ -43,10 +43,10 @@ class List(ListBox):
         """
         focused_widget, _ = self.get_focus()
         if hasattr(focused_widget, "base_widget"):
-            focused_widget = focused_widget.base_widget
+            focused_widget = focused_widget.base_widget  # type: ignore
         return focused_widget
 
-    def iterwidgets(self):
+    def iterwidgets(self) -> Iterator[Widget]:
         """Iterates over all the widgets objects in the list."""
         for existing_widget in self.body:
             # Contrary to what the urwid.AttrMap documentation says, AttrMap
@@ -55,17 +55,17 @@ class List(ListBox):
             # the identity function for non-decoration widgets)
             yield existing_widget.base_widget
 
-    def refresh(self):
+    def refresh(self) -> None:
         """Refreshes all the widgets in the list."""
         for widget in self.iterwidgets():
             if hasattr(widget, "refresh"):
                 widget.refresh()
 
-    def remove_widget(self, widget):
+    def remove_widget(self, widget: Widget) -> None:
         """Removes the given widget from the list box.
 
         Parameters:
-            widget (urwid.Widget): the widget to remove
+            widget: the widget to remove
         """
         removal_index = None
         for index, existing_widget in enumerate(self.iterwidgets()):
@@ -76,11 +76,11 @@ class List(ListBox):
         if removal_index is not None:
             self.remove_widget_at(removal_index)
 
-    def remove_widget_at(self, index):
+    def remove_widget_at(self, index: int) -> None:
         """Removes the widget with the given index from the list box.
 
         Parameters:
-            index (int): the index of the widget to remove
+            index: the index of the widget to remove
         """
         self.body.pop(index)
 

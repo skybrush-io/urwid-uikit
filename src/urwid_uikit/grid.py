@@ -1,6 +1,8 @@
-from urwid import AttrMap, Filler, GridFlow, WidgetWrap
+from typing import Iterator, Optional
+from urwid import AttrMap, Filler, GridFlow, Widget, WidgetWrap
 from urwid.command_map import (
     command_map,
+    CommandMap,
     CURSOR_DOWN,
     CURSOR_LEFT,
     CURSOR_RIGHT,
@@ -19,10 +21,19 @@ class Grid(WidgetWrap):
     displayed differently.
     """
 
-    _command_map = command_map
-    _selectable = True
+    _command_map: CommandMap = command_map
 
-    def __init__(self, cell_width, h_sep=0, v_sep=0, align="left", valign="top"):
+    _grid_flow: GridFlow
+    _selectable: bool = True
+
+    def __init__(
+        self,
+        cell_width: int,
+        h_sep: int = 0,
+        v_sep: int = 0,
+        align: str = "left",
+        valign: str = "top",
+    ):
         """Constructor."""
         self._grid_flow = GridFlow(
             [], cell_width=cell_width, h_sep=h_sep, v_sep=v_sep, align=align
@@ -30,13 +41,12 @@ class Grid(WidgetWrap):
         filler = Filler(self._grid_flow, valign=valign)
         super().__init__(filler)
 
-    def add_widget(self, widget, index=None):
+    def add_widget(self, widget: Widget, index: int = None) -> None:
         """Adds a new widget to the list box.
 
         Parameters:
-            widget (urwid.Widget): the widget to add
-            index (Optional[int]): the insertion index; ``None`` means the
-                end of the list
+            widget: the widget to add
+            index: the insertion index; ``None`` means the end of the grid
         """
         # Wrap the widget in an AttrMap before it actually gets inserted
         wrapped_widget = AttrMap(widget, "", "list focus")
@@ -49,7 +59,7 @@ class Grid(WidgetWrap):
             self._grid_flow.contents.insert(index, (wrapped_widget, options))
 
     @property
-    def command_map(self):
+    def command_map(self) -> CommandMap:
         return self._command_map
 
     @property
@@ -61,7 +71,7 @@ class Grid(WidgetWrap):
         return self._grid_flow.focus
 
     @property
-    def focus_position(self):
+    def focus_position(self) -> int:
         return self._grid_flow.focus_position
 
     @focus_position.setter
@@ -69,7 +79,7 @@ class Grid(WidgetWrap):
         self._grid_flow.focus_position = value
 
     @property
-    def focused_widget(self):
+    def focused_widget(self) -> Optional[Widget]:
         """Returns the focused widget of the list.
 
         Returns:
@@ -80,7 +90,7 @@ class Grid(WidgetWrap):
             focused_widget = focused_widget.base_widget
         return focused_widget
 
-    def iterwidgets(self):
+    def iterwidgets(self) -> Iterator[Widget]:
         """Iterates over all the widgets objects in the list."""
         for existing_widget, _ in self._grid_flow.contents:
             # Contrary to what the urwid.AttrMap documentation says, AttrMap
@@ -89,7 +99,7 @@ class Grid(WidgetWrap):
             # the identity function for non-decoration widgets)
             yield existing_widget.base_widget
 
-    def keypress(self, size, key):
+    def keypress(self, size, key: str) -> Optional[str]:
         command = self.command_map[key]
         delta, new_pos = None, None
 
@@ -125,17 +135,17 @@ class Grid(WidgetWrap):
             # new index is invalid
             pass
 
-    def refresh(self):
+    def refresh(self) -> None:
         """Refreshes all the widgets in the list."""
         for widget in self.iterwidgets():
             if hasattr(widget, "refresh"):
                 widget.refresh()
 
-    def remove_widget(self, widget):
+    def remove_widget(self, widget: Widget) -> None:
         """Removes the given widget from the list box.
 
         Parameters:
-            widget (urwid.Widget): the widget to remove
+            widget: the widget to remove
         """
         removal_index = None
         for index, existing_widget in enumerate(self.iterwidgets()):
@@ -146,21 +156,21 @@ class Grid(WidgetWrap):
         if removal_index is not None:
             self.remove_widget_at(removal_index)
 
-    def remove_widget_at(self, index):
+    def remove_widget_at(self, index: int) -> None:
         """Removes the widget with the given index from the list box.
 
         Parameters:
-            index (int): the index of the widget to remove
+            index: the index of the widget to remove
         """
         self._grid_flow.contents.pop(index)
 
-    def _get_focus_position_safe(self):
+    def _get_focus_position_safe(self) -> int:
         try:
             return self.focus_position
         except IndexError:
             return 0
 
-    def _get_num_columns_from_size(self, size):
+    def _get_num_columns_from_size(self, size) -> int:
         w, _ = size
         return w // (self._grid_flow.h_sep + self._grid_flow.cell_width)
 

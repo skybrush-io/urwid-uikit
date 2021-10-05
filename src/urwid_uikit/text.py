@@ -10,8 +10,8 @@ class SelectableText(Text):
     list boxes.
     """
 
-    def selectable(self):
+    def selectable(self) -> bool:
         return True
 
-    def keypress(self, size, key):
+    def keypress(self, size, key: str) -> str:
         return key

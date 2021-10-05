@@ -1,5 +1,6 @@
 """Helper widgets for implementing dropdown menus"""
 
+from typing import Callable, Iterable, Optional, Sequence, Tuple, TypeVar, Union
 from urwid import (
     AttrMap,
     Button,
@@ -7,6 +8,7 @@ from urwid import (
     ListBox,
     SimpleFocusListWalker,
     Text,
+    Widget,
     WidgetWrap,
     connect_signal,
     disconnect_signal,
@@ -17,10 +19,22 @@ from .graphics import PatchedLineBox
 from .utils import extract_base_widget, tuplify
 
 
+#: Type of menu item specifications that are accepted by `create_menu_item_from_spec()`
+MenuItemSpecification = Union[None, str, tuple]
+
+T = TypeVar("T")
+
+
 class Menu(WidgetWrap):
     """urwid widget that represents a menu with a ListBox_."""
 
-    def __init__(self, items=()):
+    def __init__(
+        self,
+        items: Union[
+            Sequence[MenuItemSpecification],
+            Callable[[], Sequence[MenuItemSpecification]],
+        ] = (),
+    ):
         """Creates a menu widget from the given list of items.
 
         Parameters:
@@ -32,14 +46,14 @@ class Menu(WidgetWrap):
         if callable(items):
             items = items()
         self.items = [create_menu_item_from_spec(item) for item in items]
-        super(Menu, self).__init__(ListBox(SimpleFocusListWalker(self.items)))
+        super().__init__(ListBox(SimpleFocusListWalker(self.items)))
 
-    def keypress(self, size, key):
+    def keypress(self, size, key: str):
         if len(size) != 2:
             size = self.pack(size)
-        return super(Menu, self).keypress(size, key)
+        return super().keypress(size, key)
 
-    def pack(self, size, focus=False):
+    def pack(self, size, focus: bool = False):
         if not size:
             # Fixed widget; we get to choose our own size
             if self.items:
@@ -54,16 +68,16 @@ class Menu(WidgetWrap):
             # Box widget; parent chooses a size for us and we respect that
             return size
 
-    def render(self, size, focus=False):
+    def render(self, size, focus: bool = False):
         if len(size) != 2:
             size = self.pack(size, focus)
-        return super(Menu, self).render(size, focus)
+        return super().render(size, focus)
 
-    def rows(self, size, focus=False):
+    def rows(self, size, focus: bool = False) -> int:
         return len(self.items)
 
     @staticmethod
-    def _get_item_width(item):
+    def _get_item_width(item) -> int:
         item = extract_base_widget(item)
         if isinstance(item, Button):
             return len(item.get_label()) + 5
@@ -91,7 +105,11 @@ class MenuOverlay(DialogOverlay):
     a cascading dropdown menu (as well as ordinary dialogs).
     """
 
-    def __init__(self, app_widget, menu_factory=Menu):
+    def __init__(
+        self,
+        app_widget,
+        menu_factory: Callable[[Sequence[MenuItemSpecification]], Menu] = Menu,
+    ):
         """Constructor.
 
         Parameters:
@@ -101,10 +119,10 @@ class MenuOverlay(DialogOverlay):
                 a list of items and that will create an appropriate widget to
                 be shown in the overlay containing the given items
         """
-        super(MenuOverlay, self).__init__(app_widget)
+        super().__init__(app_widget)
         self._menu_factory = menu_factory
 
-    def _on_menu_closed(self, menu):
+    def _on_menu_closed(self, menu: Widget) -> bool:
         """Callback to call when a menu widget was closed."""
         menu = menu.base_widget
         for item in menu.items:
@@ -115,7 +133,9 @@ class MenuOverlay(DialogOverlay):
                 disconnect_signal(item, "click", self._close_all_menus)
         return True
 
-    def open_menu(self, items, title=None):
+    def open_menu(
+        self, items: Sequence[MenuItemSpecification], title: Optional[str] = None
+    ) -> None:
         """Opens the given menu widget on top of the overlay.
 
         Parameters:
@@ -137,27 +157,27 @@ class MenuOverlay(DialogOverlay):
 
         return self.open_dialog(widget, on_close=self._on_menu_closed, styled=True)
 
-    def _close_all_menus(self, item):
+    def _close_all_menus(self, item: MenuItemButton) -> None:
         self.close()
 
-    def _open_submenu(self, item):
+    def _open_submenu(self, item: SubmenuButton) -> None:
         item.open_with(self)
 
 
-def create_separator():
+def create_separator() -> Widget:
     """Creates a widget in a menu that can be used as a horizontal
     separator.
     """
     return Divider(u"\u2015")
 
 
-def create_submenu(title, items):
+def create_submenu(title: str, items) -> Widget:
     """Creates a widget in a menu that will open a submenu with the given
     items when invoked.
 
     Parameters:
-        title (str): the title of the submenu; it will be used both for the
-            label of the menu widget and the label of the submenu box.
+        title: the title of the submenu; it will be used both for the label of
+            the menu widget and the label of the submenu box.
         items (Union[List, callable]): the list of items to show in the menu,
             or a function that will return such a list when invoked with no
             arguments. Each item in the list will be passed through to
@@ -175,13 +195,18 @@ def create_submenu(title, items):
         return AttrMap(Text("  " + title), "menu disabled")
 
 
-def create_submenu_from_enum(title, items, getter, setter):
+def create_submenu_from_enum(
+    title: str,
+    items: Iterable[Tuple[T, str]],
+    getter: Union[T, Callable[[], T]],
+    setter: Callable[[T], None],
+) -> MenuItemSpecification:
     """Creates an array representing a submenu in a menu structure where each
     item corresponds to a possible element of an enum, and at most one of
     these elements is marked as the currently selected one.
 
     Parameters:
-        title (str): the title of the submenu
+        title: the title of the submenu
         items (Iterable[object, str]): an iterable that yields object-string
             pairs such that the first element of the pair is a possible value
             of the enum and the second element is the label of the
@@ -215,11 +240,16 @@ def create_submenu_from_enum(title, items, getter, setter):
     )
 
 
-def create_menu_item(title=None, callback=None, *args, **kwds):
+def create_menu_item(
+    title: Optional[str] = None,
+    callback: Optional[Callable[..., None]] = None,
+    *args,
+    **kwds
+) -> Widget:
     """Creates a widget in a menu with the given title.
 
     Parameters:
-        title (Optional[str]): the title of the menu item.
+        title: the title of the menu item.
         callback (Optional[callable]): a function to call when the menu item
             was selected. When it is ``None``, the item is assumed to be
             disabled.
@@ -229,9 +259,7 @@ def create_menu_item(title=None, callback=None, *args, **kwds):
     Returns:
         Widget: the constructed menu widget
     """
-    enabled = callback is not None
-
-    if enabled:
+    if callback is not None:
 
         def wrapper(button):
             return callback(*args, **kwds)
@@ -239,10 +267,10 @@ def create_menu_item(title=None, callback=None, *args, **kwds):
         button = MenuItemButton(title, wrapper)
         return AttrMap(button, None, focus_map="menu focus")
     else:
-        return AttrMap(Text("  " + title), "menu disabled")
+        return AttrMap(Text("  " + (title or "")), "menu disabled")
 
 
-def create_menu_item_from_spec(spec=None):
+def create_menu_item_from_spec(spec_: MenuItemSpecification = None):
     """Creates a widget in a menu from a specification object.
 
     The specification object is a tuple where the first element of the tuple
@@ -265,7 +293,7 @@ def create_menu_item_from_spec(spec=None):
     Returns:
         Widget: the constructed menu widget
     """
-    spec = tuplify(spec)
+    spec = tuplify(spec_)
 
     title = spec[0]
 

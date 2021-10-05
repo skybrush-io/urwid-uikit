@@ -29,13 +29,12 @@ from typing import (
     NoReturn,
     Optional,
     Sequence,
-    Tuple,
     TypeVar,
-    Union,
 )
 
 from .concurrency import CancellableThread, SelectableQueue
-from .menus import MenuOverlay
+from .menus import MenuItemSpecification, MenuOverlay
+from .types import ColumnOptions, TextOrMarkup
 
 log = logging.getLogger(__name__)
 
@@ -48,16 +47,7 @@ Event = Any
 
 
 class Application(Generic[TWidget], metaclass=ABCMeta):
-    """Base class for urwid-based applications.
-
-    Attributes:
-        frame (urwid.Widget): the main widget of the application
-        loop (urwid.MainLoop): the ``urwid`` main loop. Set to ``None``
-            when the loop was not constructed yet.
-        on_menu_invoked (callable): a function to call when the application is
-            about to open a menu. It must return an urwid widget to show in the
-            menu box, or ``None`` if the application does not have a menu.
-    """
+    """Base class for urwid-based applications."""
 
     palette = [
         ("bg", "light gray", "black"),
@@ -99,7 +89,10 @@ class Application(Generic[TWidget], metaclass=ABCMeta):
     _my_thread: Optional[Thread]
 
     frame: TWidget
+    """The main widget of the application."""
+
     loop: MainLoop
+    """The urwid main loop."""
 
     def __init__(self, encoding: str = "utf8"):
         """Constructor."""
@@ -373,11 +366,9 @@ class Application(Generic[TWidget], metaclass=ABCMeta):
         """
         assert self._menu_overlay is not None, "menu overlay is not ready yet"
 
-        func = getattr(self, "on_menu_invoked", None)
-        if func is not None:
-            items = func()
-            if items:
-                self._menu_overlay.open_menu(items, title="Main menu")
+        items = self.on_menu_invoked()
+        if items is not None:
+            self._menu_overlay.open_menu(items, title="Main menu")
             return True
         else:
             return False
@@ -395,6 +386,9 @@ class Application(Generic[TWidget], metaclass=ABCMeta):
             self.quit()
         elif input == "esc":
             self.invoke_menu() or self.quit()
+
+    def on_menu_invoked(self) -> Optional[Sequence[MenuItemSpecification]]:
+        pass
 
     def process_event(self, event: Event) -> None:
         """Processes the given event that was dispatched via
@@ -617,13 +611,6 @@ class CallbackHandle:
             return max(self._next_call_at - time(), 0.0)
         else:
             return 0.0
-
-
-#: Type alias for objects returned from Columns.options() in urwid
-ColumnOptions = Optional[Union[int, float, Tuple[Any, ...]]]
-
-#: Type alias for urwid text or markup
-TextOrMarkup = Union[str, Tuple[str, str], Sequence[Union[str, Tuple[str, str]]]]
 
 
 class ApplicationFrame(Frame):
