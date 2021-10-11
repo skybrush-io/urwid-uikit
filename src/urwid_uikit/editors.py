@@ -1,7 +1,6 @@
 from collections import deque
-from collections.abc import Sequence
 from urwid import Edit, connect_signal
-from typing import Deque, Optional, TypeVar
+from typing import Deque, Optional, Sequence, TypeVar
 
 __all__ = ("EditWithHistory",)
 
