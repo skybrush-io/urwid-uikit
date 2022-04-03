@@ -1,7 +1,7 @@
-flockwave-ext
-=============
+urwid-uikit
+===========
 
-Generic extension manager for Skybrush-related projects
+Commonly used UI widgets for urwid-based Skybrush apps
 
 License
 -------
