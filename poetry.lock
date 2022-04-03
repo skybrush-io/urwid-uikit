@@ -6,15 +6,10 @@ category = "main"
 optional = false
 python-versions = "*"
 
-[package.source]
-type = "legacy"
-url = "https://pypi.collmot.com/simple"
-reference = "collmot"
-
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "18bf40499bd8383d80986e2039f47edb67cffa2dc8cae979166bffd5d37692de"
+content-hash = "5e8c6a36107d45fc02ce2ec6a7059f7c648195af241909203cc2abca8c6eb691"
 
 [metadata.files]
 urwid = [

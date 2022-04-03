@@ -18,6 +18,12 @@ urwid = "^2.1.0"
 [[tool.poetry.source]]
 name = "collmot"
 url = "https://pypi.collmot.com/simple/"
+secondary = true
+
+[[tool.poetry.source]]
+name = "fury"
+url = "https://pypi.fury.io/skybrush/"
+secondary = true
 
 [build-system]
 requires = ["poetry>=0.12"]
