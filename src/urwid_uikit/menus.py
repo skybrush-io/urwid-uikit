@@ -168,7 +168,7 @@ def create_separator() -> Widget:
     """Creates a widget in a menu that can be used as a horizontal
     separator.
     """
-    return Divider(u"\u2015")
+    return Divider("\u2015")
 
 
 def create_submenu(title: str, items) -> Widget:

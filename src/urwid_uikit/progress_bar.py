@@ -1,7 +1,6 @@
 """Customized progress bar widgets."""
 
-from urwid import ProgressBar, Text, CLIP
-from urwid.compat import ord2
+from urwid import ProgressBar
 
 
 __all__ = ("CustomTextProgressBar",)

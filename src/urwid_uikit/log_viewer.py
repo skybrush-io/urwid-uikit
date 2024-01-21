@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 
 def _create_marker():
-    return Divider(u"\u2015")
+    return Divider("\u2015")
 
 
 class ColoredFormatterWrapper(Formatter):
@@ -27,9 +27,9 @@ class ColoredFormatterWrapper(Formatter):
     _formatter: Formatter
 
     _level_to_prefix: Dict[str, TextOrMarkup] = {
-        "CRITICAL": ("error", u" \N{BLACK CIRCLE} "),
-        "DEBUG": ("debug", u" \N{BLACK RIGHT-POINTING TRIANGLE} "),
-        "WARNING": ("warning", u" \N{BLACK UP-POINTING TRIANGLE} "),
+        "CRITICAL": ("error", " \N{BLACK CIRCLE} "),
+        "DEBUG": ("debug", " \N{BLACK RIGHT-POINTING TRIANGLE} "),
+        "WARNING": ("warning", " \N{BLACK UP-POINTING TRIANGLE} "),
         "ERROR": ("error", " \N{BLACK CIRCLE} "),
     }
 

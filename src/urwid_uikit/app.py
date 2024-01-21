@@ -150,7 +150,7 @@ class Application(Generic[TWidget], metaclass=ABCMeta):
         at: Optional[float] = None,
         every: Optional[float] = None,
         *args,
-        **kwds
+        **kwds,
     ) -> "CallbackHandle":
         """Schedules a callback function to be called by the main loop of
         the application after a given number of seconds.
@@ -235,7 +235,7 @@ class Application(Generic[TWidget], metaclass=ABCMeta):
         func: Callable[..., Any],
         thread_factory: Callable[..., CancellableThread] = CancellableThread,
         *args,
-        **kwds
+        **kwds,
     ) -> CancellableThread:
         """Creates a daemon thread that will execute the given function
         and exits as soon as there are only other daemon threads left in
@@ -255,7 +255,7 @@ class Application(Generic[TWidget], metaclass=ABCMeta):
         Returns:
             a daemon thread that is ready to be started
         """
-        daemon = self.create_worker(func, thread_factory=thread_factory, *args, **kwds)
+        daemon = self.create_worker(func, *args, thread_factory=thread_factory, **kwds)
         daemon.daemon = True
         return daemon
 
@@ -264,7 +264,7 @@ class Application(Generic[TWidget], metaclass=ABCMeta):
         func: Callable[..., Any],
         thread_factory: Callable[..., CancellableThread] = CancellableThread,
         *args,
-        **kwds
+        **kwds,
     ) -> CancellableThread:
         """Creates a worker thread that will execute the given function.
         Any remaining positional and keyword arguments are passed on to the
