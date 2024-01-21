@@ -8,24 +8,33 @@ packages = [
 ]
 license = "MIT"
 
-[tool.poetry.dependencies]
-python = "^3.7"
-urwid = "^2.1.0"
-
-[tool.poetry.dev-dependencies]
-
-[tool.poetry.extras]
+[[tool.poetry.source]]
+name = "PyPI"
+priority = "primary"
 
 [[tool.poetry.source]]
 name = "collmot"
 url = "https://pypi.collmot.com/simple/"
-secondary = true
+priority = "explicit"
 
 [[tool.poetry.source]]
 name = "fury"
 url = "https://pypi.fury.io/skybrush/"
-secondary = true
+priority = "supplemental"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+urwid = "^2.4.4"
+
+[tool.poetry.group.dev.dependencies]
+
+[tool.poetry.extras]
+
+[tool.ruff]
+ignore = ["B905", "C901", "E402", "E501"]
+line-length = 80
+select = ["B", "C", "E", "F", "W"]
 
 [build-system]
-requires = ["poetry>=0.12"]
-build-backend = "poetry.masonry.api"
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
