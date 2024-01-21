@@ -7,7 +7,7 @@ import logging
 from abc import abstractmethod, ABCMeta
 from argparse import Namespace
 from heapq import heapify
-from inspect import getargspec
+from inspect import signature
 from urwid import (
     AttrMap,
     Columns,
@@ -303,7 +303,7 @@ class Application(Generic[TWidget], metaclass=ABCMeta):
         Returns:
             a worker thread that is ready to be started
         """
-        arg_names, _, _, _ = getargspec(func)
+        sig = signature(func)
         context = Namespace(
             call=self.call_on_ui_thread,
             call_later=self.call_later,
@@ -312,7 +312,7 @@ class Application(Generic[TWidget], metaclass=ABCMeta):
             refresh=self.refresh,
         )
 
-        if "ui" in arg_names:
+        if "ui" in sig.parameters:
             if not kwds:
                 kwds = {}
             kwds["ui"] = context
