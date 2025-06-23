@@ -244,7 +244,7 @@ def create_menu_item(
     title: Optional[str] = None,
     callback: Optional[Callable[..., None]] = None,
     *args,
-    **kwds
+    **kwds,
 ) -> Widget:
     """Creates a widget in a menu with the given title.
 

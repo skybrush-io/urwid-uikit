@@ -1,40 +1,24 @@
-[tool.poetry]
+[project]
 name = "urwid-uikit"
 version = "2.0.2"
 description = "Commonly used UI widgets for urwid-based apps"
-authors = ["Tamas Nepusz <tamas@collmot.com>"]
-packages = [
-    { include = "urwid_uikit", from = "src" }
-]
+authors = [{ name = "Tamas Nepusz", email = "tamas@collmot.com" }]
 license = "MIT"
+requires-python = ">=3.9"
+dependencies = ["urwid >= 2.4.4"]
 
-[[tool.poetry.source]]
-name = "PyPI"
-priority = "primary"
+[tool.hatch.build.targets.wheel]
+packages = ["src/urwid_uikit"]
 
-[[tool.poetry.source]]
-name = "collmot"
-url = "https://pypi.collmot.com/simple/"
-priority = "explicit"
-
-[[tool.poetry.source]]
+[[tool.uv.index]]
 name = "fury"
 url = "https://pypi.fury.io/skybrush/"
-priority = "supplemental"
-
-[tool.poetry.dependencies]
-python = "^3.9"
-urwid = "^2.4.4"
-
-[tool.poetry.group.dev.dependencies]
-
-[tool.poetry.extras]
+publish-url = "https://pypi.fury.io/skybrush/"
 
 [tool.ruff]
-ignore = ["B905", "C901", "E402", "E501"]
-line-length = 80
-select = ["B", "C", "E", "F", "W"]
+lint.ignore = ["B905", "C901", "E402", "E501"]
+lint.select = ["B", "C", "E", "F", "W"]
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"

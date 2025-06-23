@@ -175,7 +175,7 @@ class Application(Generic[TWidget], metaclass=ABCMeta):
 
         if after is None and at is None:
             if every is None:
-                raise ValueError("exactly one of 'after' and 'at' must be " "given")
+                raise ValueError("exactly one of 'after' and 'at' must be given")
             else:
                 after = 0
 
@@ -702,8 +702,9 @@ class ApplicationFrame(Frame):
             pass
         else:
             raise TypeError(
-                "expected None, int, float or tuple as "
-                "options, got: {0!r}".format(type(options))
+                "expected None, int, float or tuple as options, got: {0!r}".format(
+                    type(options)
+                )
             )
 
         if index is None:
