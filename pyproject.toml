@@ -1,6 +1,6 @@
 [project]
 name = "urwid-uikit"
-version = "2.1.0"
+version = "2.1.1"
 description = "Commonly used UI widgets for urwid-based apps"
 authors = [{ name = "Tamas Nepusz", email = "tamas@collmot.com" }]
 license = "MIT"
